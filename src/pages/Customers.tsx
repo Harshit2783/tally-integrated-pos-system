@@ -1,7 +1,6 @@
 
 import React, { useState } from 'react';
 import MainLayout from '../components/layout/MainLayout';
-import { CompanyProvider } from '../contexts/CompanyContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import CustomersList from '../components/customers/CustomersList';
 import CustomerForm from '../components/customers/CustomerForm';
@@ -58,10 +57,4 @@ const Customers = () => {
   );
 };
 
-const CustomersPage = () => (
-  <CompanyProvider>
-    <Customers />
-  </CompanyProvider>
-);
-
-export default CustomersPage;
+export default Customers;

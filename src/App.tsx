@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
+import { CompanyProvider } from "./contexts/CompanyContext";
 import { CustomersProvider } from "./contexts/CustomersContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
@@ -28,22 +29,24 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <CustomersProvider>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/" element={<Index />} />
-              <Route path="/companies" element={<Companies />} />
-              <Route path="/customers" element={<Customers />} />
-              <Route path="/inventory" element={<Inventory />} />
-              <Route path="/godowns" element={<Godowns />} />
-              <Route path="/sales" element={<Sales />} />
-              <Route path="/sales/new" element={<NewSale />} />
-              <Route path="/reports" element={<Reports />} />
-              <Route path="/tally-sync" element={<TallySync />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </CustomersProvider>
+          <CompanyProvider>
+            <CustomersProvider>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/" element={<Index />} />
+                <Route path="/companies" element={<Companies />} />
+                <Route path="/customers" element={<Customers />} />
+                <Route path="/inventory" element={<Inventory />} />
+                <Route path="/godowns" element={<Godowns />} />
+                <Route path="/sales" element={<Sales />} />
+                <Route path="/sales/new" element={<NewSale />} />
+                <Route path="/reports" element={<Reports />} />
+                <Route path="/tally-sync" element={<TallySync />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </CustomersProvider>
+          </CompanyProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
