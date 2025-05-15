@@ -1,9 +1,10 @@
+
 import React, { useMemo } from 'react';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useSales } from '../../contexts/SalesContext';
 import { useInventory } from '../../contexts/InventoryContext';
 import { Card, CardContent } from '@/components/ui/card';
-import { ShoppingCart, Package, Building, AlertTriangle } from 'lucide-react';
+import { TrendingUp, Users, Package, ArrowUp } from 'lucide-react';
 
 const DashboardSummary: React.FC = () => {
   const { currentCompany } = useCompany();
@@ -16,26 +17,24 @@ const DashboardSummary: React.FC = () => {
     );
 
     const todayRevenue = todaySales.reduce((sum, sale) => sum + sale.totalAmount, 0);
-    const totalRevenue = filteredSales.reduce((sum, sale) => sum + sale.totalAmount, 0);
-
-    const gstSalesCount = filteredSales.filter(
+    
+    const gstSales = filteredSales.filter(
       (sale) => sale.billType === 'GST'
-    ).length;
+    );
+    const gstRevenue = gstSales.reduce((sum, sale) => sum + sale.totalAmount, 0);
 
-    const nonGstSalesCount = filteredSales.filter(
+    const nonGstSales = filteredSales.filter(
       (sale) => sale.billType === 'NON-GST'
-    ).length;
+    );
+    const nonGstRevenue = nonGstSales.reduce((sum, sale) => sum + sale.totalAmount, 0);
 
     const lowStockItems = filteredItems.filter((item) => item.stockQuantity <= 10);
 
     return {
       todayRevenue,
-      totalRevenue,
-      todaySalesCount: todaySales.length,
-      totalSalesCount: filteredSales.length,
-      gstSalesCount,
-      nonGstSalesCount,
-      inventoryCount: filteredItems.length,
+      gstRevenue,
+      nonGstRevenue,
+      totalItemsCount: filteredItems.length,
       lowStockCount: lowStockItems.length
     };
   }, [filteredSales, filteredItems]);
@@ -54,16 +53,35 @@ const DashboardSummary: React.FC = () => {
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Today's Revenue</p>
+              <p className="text-sm font-medium text-muted-foreground">Total Sales (Today)</p>
               <h3 className="text-2xl font-bold">₹{stats.todayRevenue.toFixed(2)}</h3>
+              <p className="text-xs text-green-600 mt-1 flex items-center">
+                <ArrowUp className="h-3 w-3 mr-1" />
+                <span>+20.1% from yesterday</span>
+              </p>
+            </div>
+            <div className="p-2 bg-gray-100 rounded-full">
+              <TrendingUp className="h-5 w-5 text-gray-600" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">GST Sales</p>
+              <h3 className="text-2xl font-bold">₹{stats.gstRevenue.toFixed(2)}</h3>
+              <p className="text-xs text-green-600 mt-1 flex items-center">
+                <ArrowUp className="h-3 w-3 mr-1" />
+                <span>+15% from yesterday</span>
+              </p>
             </div>
             <div className="p-2 bg-blue-100 rounded-full">
-              <ShoppingCart className="h-5 w-5 text-blue-600" />
+              <Users className="h-5 w-5 text-blue-600" />
             </div>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            {stats.todaySalesCount} sales today
-          </p>
         </CardContent>
       </Card>
 
@@ -71,16 +89,17 @@ const DashboardSummary: React.FC = () => {
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
-              <h3 className="text-2xl font-bold">₹{stats.totalRevenue.toFixed(2)}</h3>
+              <p className="text-sm font-medium text-muted-foreground">Non-GST Sales</p>
+              <h3 className="text-2xl font-bold">₹{stats.nonGstRevenue.toFixed(2)}</h3>
+              <p className="text-xs text-green-600 mt-1 flex items-center">
+                <ArrowUp className="h-3 w-3 mr-1" />
+                <span>+10% from yesterday</span>
+              </p>
             </div>
             <div className="p-2 bg-green-100 rounded-full">
-              <Building className="h-5 w-5 text-green-600" />
+              <TrendingUp className="h-5 w-5 text-green-600" />
             </div>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            From {stats.totalSalesCount} total sales
-          </p>
         </CardContent>
       </Card>
 
@@ -88,33 +107,16 @@ const DashboardSummary: React.FC = () => {
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-muted-foreground">Inventory Items</p>
-              <h3 className="text-2xl font-bold">{stats.inventoryCount}</h3>
+              <p className="text-sm font-medium text-muted-foreground">Total Items</p>
+              <h3 className="text-2xl font-bold">{stats.totalItemsCount}</h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                {stats.lowStockCount} items low in stock
+              </p>
             </div>
             <div className="p-2 bg-purple-100 rounded-full">
               <Package className="h-5 w-5 text-purple-600" />
             </div>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            {stats.lowStockCount} items low on stock
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Bills</p>
-              <h3 className="text-2xl font-bold">{stats.gstSalesCount + stats.nonGstSalesCount}</h3>
-            </div>
-            <div className="p-2 bg-amber-100 rounded-full">
-              <AlertTriangle className="h-5 w-5 text-amber-600" />
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            {stats.gstSalesCount} GST, {stats.nonGstSalesCount} Non-GST
-          </p>
         </CardContent>
       </Card>
     </div>

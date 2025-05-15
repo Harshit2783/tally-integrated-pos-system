@@ -1,7 +1,8 @@
 
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, Navigate } from 'react-router-dom';
 import { useCompany } from '../../contexts/CompanyContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { 
   Home, 
   Package, 
@@ -11,8 +12,20 @@ import {
   Menu, 
   X, 
   Building2, 
-  Warehouse
+  Warehouse,
+  Users,
+  LogOut,
+  Upload
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -22,6 +35,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const location = useLocation();
   const { currentCompany } = useCompany();
+  const { currentUser, isAuthenticated, logout } = useAuth();
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
@@ -30,16 +44,23 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const navItems = [
     { name: 'Dashboard', href: '/', icon: Home },
     { name: 'Companies', href: '/companies', icon: Building2 },
+    { name: 'Customers', href: '/customers', icon: Users },
     { name: 'Inventory', href: '/inventory', icon: Package },
     { name: 'Godowns', href: '/godowns', icon: Warehouse },
     { name: 'Sales', href: '/sales', icon: ShoppingCart },
     { name: 'Reports', href: '/reports', icon: BarChart2 },
+    { name: 'Tally Sync', href: '/tally-sync', icon: Upload },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
 
   const isActive = (path: string) => {
     return location.pathname === path;
   };
+
+  // Redirect to login if not authenticated
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
 
   return (
     <div className="min-h-screen flex">
@@ -108,19 +129,51 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               <h1 className="text-xl font-semibold text-gray-800">
                 {location.pathname === '/' ? 'Dashboard' : 
                  location.pathname === '/companies' ? 'Companies' :
+                 location.pathname === '/customers' ? 'Customers' :
                  location.pathname === '/inventory' ? 'Inventory' :
                  location.pathname === '/godowns' ? 'Godowns' :
                  location.pathname === '/sales' ? 'Sales' :
                  location.pathname === '/reports' ? 'Reports' :
+                 location.pathname === '/tally-sync' ? 'Tally Sync' :
                  location.pathname === '/settings' ? 'Settings' : 'POS System'}
               </h1>
             </div>
-            <div>
+            <div className="flex items-center space-x-4">
               {currentCompany && (
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-gray-600 hidden md:inline">
                   {currentCompany.name}
                 </span>
               )}
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center space-x-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback className="bg-blue-600 text-white">
+                        {currentUser?.name.substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>
+                    <div className="font-medium">{currentUser?.name}</div>
+                    <div className="text-xs text-gray-500">{currentUser?.role}</div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/settings">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Settings</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={logout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </header>

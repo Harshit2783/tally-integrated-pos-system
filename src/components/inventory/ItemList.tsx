@@ -2,11 +2,12 @@
 import React, { useState } from 'react';
 import { useInventory } from '../../contexts/InventoryContext';
 import { Item } from '../../types';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
+import { useCompany } from '../../contexts/CompanyContext';
 
 interface ItemListProps {
   onEdit: (item: Item) => void;
@@ -15,12 +16,20 @@ interface ItemListProps {
 
 const ItemList: React.FC<ItemListProps> = ({ onEdit, onDelete }) => {
   const { filteredItems, filteredGodowns } = useInventory();
+  const { companies, currentCompany } = useCompany();
+  
   const [search, setSearch] = useState('');
   const [filterGodown, setFilterGodown] = useState('all');
   const [filterType, setFilterType] = useState<'all' | 'GST' | 'NON-GST'>('all');
+  const [filterCompany, setFilterCompany] = useState(currentCompany?.id || 'all');
 
   const godownNameMap = filteredGodowns.reduce((acc, godown) => {
     acc[godown.id] = godown.name;
+    return acc;
+  }, {} as Record<string, string>);
+
+  const companyNameMap = companies.reduce((acc, company) => {
+    acc[company.id] = company.name;
     return acc;
   }, {} as Record<string, string>);
 
@@ -32,8 +41,9 @@ const ItemList: React.FC<ItemListProps> = ({ onEdit, onDelete }) => {
     
     const matchesGodown = filterGodown === 'all' || item.godownId === filterGodown;
     const matchesType = filterType === 'all' || item.type === filterType;
+    const matchesCompany = filterCompany === 'all' || item.companyId === filterCompany;
     
-    return matchesSearch && matchesGodown && matchesType;
+    return matchesSearch && matchesGodown && matchesType && matchesCompany;
   });
 
   if (filteredItems.length === 0) {
@@ -48,13 +58,30 @@ const ItemList: React.FC<ItemListProps> = ({ onEdit, onDelete }) => {
     <div className="space-y-4">
       {/* Search and Filter Controls */}
       <div className="flex flex-col md:flex-row gap-4">
-        <Input
-          placeholder="Search items..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="md:w-1/3"
-        />
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+          <Input
+            placeholder="Search items..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
         <div className="flex flex-col sm:flex-row gap-2">
+          <Select value={filterCompany} onValueChange={setFilterCompany}>
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="Filter by company" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Companies</SelectItem>
+              {companies.map((company) => (
+                <SelectItem key={company.id} value={company.id}>
+                  {company.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
           <Select value={filterGodown} onValueChange={setFilterGodown}>
             <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Select Godown" />
@@ -92,6 +119,7 @@ const ItemList: React.FC<ItemListProps> = ({ onEdit, onDelete }) => {
             <tr>
               <th className="px-4 py-3">Item ID</th>
               <th className="px-4 py-3">Name</th>
+              <th className="px-4 py-3">Company</th>
               <th className="px-4 py-3">Type</th>
               <th className="px-4 py-3">Unit Price</th>
               <th className="px-4 py-3">GST %</th>
@@ -105,6 +133,7 @@ const ItemList: React.FC<ItemListProps> = ({ onEdit, onDelete }) => {
               <tr key={item.id} className="bg-white border-b">
                 <td className="px-4 py-3">{item.itemId}</td>
                 <td className="px-4 py-3 font-medium">{item.name}</td>
+                <td className="px-4 py-3">{companyNameMap[item.companyId] || 'Unknown'}</td>
                 <td className="px-4 py-3">
                   <span className={`px-2 py-1 rounded text-xs ${
                     item.type === 'GST' 
