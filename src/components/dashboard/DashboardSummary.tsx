@@ -1,10 +1,9 @@
-
 import React, { useMemo } from 'react';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useSales } from '../../contexts/SalesContext';
 import { useInventory } from '../../contexts/InventoryContext';
 import { Card, CardContent } from '@/components/ui/card';
-import { ShoppingCart, Package, Buildings, AlertTriangle } from 'lucide-react';
+import { ShoppingCart, Package, Building, AlertTriangle } from 'lucide-react';
 
 const DashboardSummary: React.FC = () => {
   const { currentCompany } = useCompany();
@@ -76,7 +75,7 @@ const DashboardSummary: React.FC = () => {
               <h3 className="text-2xl font-bold">₹{stats.totalRevenue.toFixed(2)}</h3>
             </div>
             <div className="p-2 bg-green-100 rounded-full">
-              <Buildings className="h-5 w-5 text-green-600" />
+              <Building className="h-5 w-5 text-green-600" />
             </div>
           </div>
           <p className="text-xs text-muted-foreground mt-2">

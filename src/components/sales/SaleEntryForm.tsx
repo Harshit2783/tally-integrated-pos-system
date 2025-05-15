@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useInventory } from '../../contexts/InventoryContext';
@@ -134,6 +133,7 @@ const SaleEntryForm: React.FC = () => {
       if (gstSaleItems.length > 0) {
         createSale({
           companyId: currentCompany.id,
+          billNumber: `GST-${Date.now()}`,
           date: new Date().toISOString(),
           customerName,
           billType: 'GST',
@@ -145,6 +145,7 @@ const SaleEntryForm: React.FC = () => {
       if (nonGstSaleItems.length > 0) {
         createSale({
           companyId: currentCompany.id,
+          billNumber: `NON-${Date.now()}`,
           date: new Date().toISOString(),
           customerName,
           billType: 'NON-GST',
@@ -155,6 +156,7 @@ const SaleEntryForm: React.FC = () => {
     } else if (gstSaleItems.length > 0) {
       createSale({
         companyId: currentCompany.id,
+        billNumber: `GST-${Date.now()}`,
         date: new Date().toISOString(),
         customerName,
         billType: 'GST',
@@ -164,6 +166,7 @@ const SaleEntryForm: React.FC = () => {
     } else if (nonGstSaleItems.length > 0) {
       createSale({
         companyId: currentCompany.id,
+        billNumber: `NON-${Date.now()}`,
         date: new Date().toISOString(),
         customerName,
         billType: 'NON-GST',
