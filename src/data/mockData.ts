@@ -1,5 +1,5 @@
 
-import { Company, Godown, Item, Sale } from '../types';
+import { Company, Godown, Item, Sale, SaleItem } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 // Mock Companies
@@ -11,6 +11,10 @@ export const companies: Company[] = [
     phone: '+91 9876543210',
     email: 'info@abccorp.com',
     gstin: '27AAPFU0939F1ZV',
+    gstNumber: '27AAPFU0939F1ZV',
+    panNumber: 'ABCDE1234F',
+    cinNumber: 'U72200MH2020PTC123456',
+    tanNumber: 'MUMB12345A',
     createdAt: new Date().toISOString()
   },
   {
@@ -20,6 +24,10 @@ export const companies: Company[] = [
     phone: '+91 8765432109',
     email: 'contact@xyzent.com',
     gstin: '07AAACX9578M1ZP',
+    gstNumber: '07AAACX9578M1ZP',
+    panNumber: 'FGHIJ5678K',
+    cinNumber: 'L17110DL1973PLC123456',
+    tanNumber: 'DELH67890B',
     createdAt: new Date().toISOString()
   }
 ];
@@ -31,6 +39,9 @@ export const godowns: Godown[] = [
     companyId: '1',
     name: 'Main Godown',
     address: '123 Storage Lane, Mumbai',
+    contactPerson: 'Rajesh Kumar',
+    phone: '+91 9876543210',
+    email: 'godown1@abccorp.com',
     createdAt: new Date().toISOString()
   },
   {
@@ -38,6 +49,9 @@ export const godowns: Godown[] = [
     companyId: '1',
     name: 'Secondary Godown',
     address: '456 Warehouse Rd, Mumbai',
+    contactPerson: 'Amit Singh',
+    phone: '+91 9876543211',
+    email: 'godown2@abccorp.com',
     createdAt: new Date().toISOString()
   },
   {
@@ -45,6 +59,9 @@ export const godowns: Godown[] = [
     companyId: '2',
     name: 'Main Godown',
     address: '789 Storage St, Delhi',
+    contactPerson: 'Priya Sharma',
+    phone: '+91 8765432109',
+    email: 'godown@xyzent.com',
     createdAt: new Date().toISOString()
   }
 ];
@@ -131,7 +148,8 @@ export const sales: Sale[] = [
         unitPrice: 45000,
         gstPercentage: 18,
         gstAmount: 8100,
-        totalPrice: 53100
+        totalPrice: 53100,
+        totalAmount: 53100
       }
     ],
     createdAt: new Date().toISOString()
@@ -151,7 +169,8 @@ export const sales: Sale[] = [
         name: 'Notebook',
         quantity: 5,
         unitPrice: 50,
-        totalPrice: 250
+        totalPrice: 250,
+        totalAmount: 250
       }
     ],
     createdAt: new Date().toISOString()

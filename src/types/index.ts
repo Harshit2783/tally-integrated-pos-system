@@ -1,3 +1,4 @@
+
 export interface Company {
   id: string;
   name: string;
@@ -8,6 +9,7 @@ export interface Company {
   panNumber: string;
   cinNumber: string;
   tanNumber: string;
+  gstin: string; // Added this field as it's being used
   createdAt: string;
 }
 
@@ -41,6 +43,8 @@ export interface SaleItem {
   quantity: number;
   unitPrice: number;
   gstPercentage?: number;
+  gstAmount?: number; // Added this field as it's being used
+  totalPrice: number; // Added this field as it's being used
   totalAmount: number;
 }
 
@@ -70,3 +74,12 @@ export interface Sale {
   createdAt: string;
 }
 
+// Company Context Type
+export interface CompanyContextType {
+  companies: Company[];
+  currentCompany: Company | null;
+  setCurrentCompany: (company: Company) => void;
+  addCompany: (companyData: Omit<Company, 'id' | 'createdAt'>) => void;
+  updateCompany: (company: Company) => void;
+  deleteCompany: (id: string) => void;
+}

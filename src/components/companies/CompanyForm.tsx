@@ -24,6 +24,10 @@ const CompanyForm: React.FC<CompanyFormProps> = ({
     phone: '',
     email: '',
     gstin: '',
+    gstNumber: '',
+    panNumber: '',
+    cinNumber: '',
+    tanNumber: '',
   });
 
   useEffect(() => {

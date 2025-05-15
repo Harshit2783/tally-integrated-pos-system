@@ -25,6 +25,9 @@ const GodownForm: React.FC<GodownFormProps> = ({
     companyId: currentCompany?.id || '',
     name: '',
     address: '',
+    contactPerson: '',
+    phone: '',
+    email: '',
   });
 
   useEffect(() => {
@@ -36,6 +39,9 @@ const GodownForm: React.FC<GodownFormProps> = ({
         companyId: currentCompany.id,
         name: '',
         address: '',
+        contactPerson: '',
+        phone: '',
+        email: '',
       });
     }
   }, [godown, currentCompany]);
@@ -91,6 +97,39 @@ const GodownForm: React.FC<GodownFormProps> = ({
               value={formData.address || ''}
               onChange={handleChange}
               rows={3}
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="contactPerson">Contact Person</Label>
+              <Input
+                id="contactPerson"
+                name="contactPerson"
+                value={formData.contactPerson || ''}
+                onChange={handleChange}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone</Label>
+              <Input
+                id="phone"
+                name="phone"
+                value={formData.phone || ''}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              value={formData.email || ''}
+              onChange={handleChange}
             />
           </div>
         </CardContent>

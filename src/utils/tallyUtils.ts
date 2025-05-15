@@ -43,7 +43,7 @@ export const generateTallyXML = (sale: Sale, company: Company): string => {
             <ALLLEDGERENTRIES.LIST>
               <LEDGERNAME>${ledgerName}</LEDGERNAME>
               <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
-              <AMOUNT>${item.totalPrice}</AMOUNT>
+              <AMOUNT>${item.totalAmount}</AMOUNT>
             </ALLLEDGERENTRIES.LIST>
             <INVENTORYENTRIES.LIST>
               <STOCKITEMNAME>${item.name}</STOCKITEMNAME>

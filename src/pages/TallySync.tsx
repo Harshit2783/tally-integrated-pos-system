@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Sync } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 
 const TallySync = () => {
   const [tallyHost, setTallyHost] = useState('localhost');
@@ -90,7 +90,7 @@ const TallySync = () => {
             <p className="text-muted-foreground">Configure and manage Tally ERP integration</p>
           </div>
           <Button onClick={handleSyncNow}>
-            <Sync className="mr-2 h-4 w-4" />
+            <RefreshCw className="mr-2 h-4 w-4" />
             Sync Now
           </Button>
         </div>

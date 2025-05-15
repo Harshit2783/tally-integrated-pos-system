@@ -70,6 +70,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         quantity: newQuantity,
         gstAmount: newGstAmount,
         totalPrice: newTotalPrice + newGstAmount,
+        totalAmount: newTotalPrice + newGstAmount,
       };
       
       setCurrentSaleItems(updatedItems);
@@ -108,7 +109,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     
     // Calculate total amount
     const totalAmount = currentSaleItems.reduce(
-      (total, item) => total + item.totalPrice,
+      (total, item) => total + item.totalAmount,
       0
     );
     
