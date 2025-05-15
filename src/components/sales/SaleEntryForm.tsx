@@ -105,6 +105,7 @@ const SaleEntryForm: React.FC = () => {
       gstPercentage: selectedItem.type === 'GST' ? selectedItem.gstPercentage : undefined,
       gstAmount: selectedItem.type === 'GST' ? gstAmount : undefined,
       totalPrice,
+      totalAmount: totalPrice,
     };
 
     addSaleItem(saleItem);
