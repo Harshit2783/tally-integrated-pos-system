@@ -10,7 +10,7 @@ import MainLayout from '../components/layout/MainLayout';
 import { CompanyProvider } from '../contexts/CompanyContext';
 import { InventoryProvider } from '../contexts/InventoryContext';
 import { SalesProvider } from '../contexts/SalesContext';
-import SaleEntryForm from '../components/sales/SaleEntryForm';
+import EnhancedSaleForm from '../components/sales/EnhancedSaleForm';
 import SalesList from '../components/sales/SalesList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -35,7 +35,7 @@ const Sales = () => {
           </TabsContent>
           
           <TabsContent value="new" className="space-y-4">
-            <SaleEntryForm />
+            <EnhancedSaleForm />
           </TabsContent>
         </Tabs>
       </div>
