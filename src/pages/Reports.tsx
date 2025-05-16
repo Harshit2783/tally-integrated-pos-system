@@ -1,4 +1,10 @@
 
+/**
+ * Reports Page
+ * Provides data visualization and reporting capabilities for sales,
+ * inventory, and financial analytics through interactive charts.
+ */
+
 import React from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import { CompanyProvider } from '../contexts/CompanyContext';

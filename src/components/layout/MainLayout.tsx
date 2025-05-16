@@ -1,4 +1,10 @@
 
+/**
+ * Main Layout Component
+ * Common layout wrapper for all authenticated pages providing consistent
+ * navigation, header, and responsive sidebar functionality.
+ */
+
 import React, { useState } from 'react';
 import { Link, useLocation, Navigate } from 'react-router-dom';
 import { useCompany } from '../../contexts/CompanyContext';

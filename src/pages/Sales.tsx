@@ -1,4 +1,10 @@
 
+/**
+ * Sales Page
+ * Manages sales transactions with functionality to create new sales,
+ * view sales history, and analyze sales data through different tabs.
+ */
+
 import React, { useState } from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import { CompanyProvider } from '../contexts/CompanyContext';

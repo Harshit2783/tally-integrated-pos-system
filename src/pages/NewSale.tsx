@@ -1,4 +1,10 @@
 
+/**
+ * New Sale Page
+ * Dedicated page for creating new sales transactions with a focused
+ * interface for adding items, customer details, and completing sales.
+ */
+
 import React from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import { CompanyProvider } from '../contexts/CompanyContext';

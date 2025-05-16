@@ -1,4 +1,10 @@
 
+/**
+ * Tally Sync Page
+ * Manages integration with Tally ERP software including connection settings,
+ * synchronization history, and manual sync operations.
+ */
+
 import React, { useState } from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import { CompanyProvider } from '../contexts/CompanyContext';

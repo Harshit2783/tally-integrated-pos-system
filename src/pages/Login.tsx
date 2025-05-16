@@ -1,4 +1,10 @@
 
+/**
+ * Login Page
+ * Authentication entry point handling user login with credential validation
+ * and redirecting authenticated users to the dashboard.
+ */
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';

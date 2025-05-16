@@ -1,3 +1,10 @@
+
+/**
+ * Not Found (404) Page
+ * Error page displayed when users attempt to access non-existent routes,
+ * providing navigation back to valid sections of the application.
+ */
+
 import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
 

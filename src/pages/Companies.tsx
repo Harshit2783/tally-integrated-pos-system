@@ -1,4 +1,10 @@
 
+/**
+ * Companies Page
+ * Manages company records with functionality to add, edit, and delete
+ * company information within the system.
+ */
+
 import React, { useState } from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import { Button } from '@/components/ui/button';

@@ -1,4 +1,10 @@
 
+/**
+ * App Root Component
+ * Main entry point that sets up the application's routing,
+ * global context providers, and authentication structure.
+ */
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";

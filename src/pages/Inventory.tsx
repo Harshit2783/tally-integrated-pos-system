@@ -1,4 +1,10 @@
 
+/**
+ * Inventory Page
+ * Manages product inventory with functionality to add, edit, and delete
+ * items with their quantities, prices, and other relevant attributes.
+ */
+
 import React, { useState } from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import { Button } from '@/components/ui/button';

@@ -1,4 +1,10 @@
 
+/**
+ * Godowns Page
+ * Manages warehouse/godown locations with functionality to add, edit,
+ * and delete storage facilities for inventory management.
+ */
+
 import React, { useState } from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import { Button } from '@/components/ui/button';

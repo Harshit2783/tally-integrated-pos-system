@@ -1,4 +1,10 @@
 
+/**
+ * Dashboard/Index Page
+ * Main landing page displaying dashboard overview with summary metrics,
+ * recent sales activity, and inventory status information.
+ */
+
 import React from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import DashboardSummary from '../components/dashboard/DashboardSummary';

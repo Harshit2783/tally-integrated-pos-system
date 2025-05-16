@@ -1,4 +1,10 @@
 
+/**
+ * Settings Page
+ * Manages application configuration including Tally integration settings,
+ * backup preferences, and other system-wide parameters.
+ */
+
 import React, { useState } from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import { CompanyProvider } from '../contexts/CompanyContext';
