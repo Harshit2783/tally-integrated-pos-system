@@ -136,15 +136,27 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
           }
           
           const newStockQuantity = item.stockQuantity - adjustedQuantity;
-          if (newStockQuantity < 0) {
+          
+          // For return items (negative quantity), we always allow the operation
+          // For sales (positive quantity), check if enough stock is available
+          if (adjustedQuantity > 0 && newStockQuantity < 0) {
             toast.error(`Not enough stock for ${item.name}`);
             return item;
           }
+          
           return { ...item, stockQuantity: newStockQuantity };
         }
         return item;
       })
     );
+    
+    // Show success message for returns (when quantity is negative)
+    if (quantity < 0) {
+      const item = items.find(item => item.id === itemId);
+      if (item) {
+        toast.success(`Stock updated for ${item.name}`);
+      }
+    }
   };
 
   return (
