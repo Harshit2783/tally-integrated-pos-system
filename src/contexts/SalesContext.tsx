@@ -119,7 +119,8 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     
     // Update stock quantities
     saleData.items.forEach(item => {
-      updateStock(item.itemId, item.quantity);
+      // Pass the sales unit to updateStock for proper unit conversion
+      updateStock(item.itemId, item.quantity, item.salesUnit);
     });
     
     // Add sale to list

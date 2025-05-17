@@ -1,14 +1,18 @@
 
 import React, { useState, useEffect } from 'react';
 import { Item } from '../../types';
-import { useCompany } from '../../contexts/CompanyContext';
-import { useInventory } from '../../contexts/InventoryContext';
-import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { generateId } from '../../data/mockData';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useInventory } from '../../contexts/InventoryContext';
 
 interface ItemFormProps {
   item?: Item;
@@ -17,12 +21,14 @@ interface ItemFormProps {
   companyId: string;
 }
 
+// Define sales units
+const SALES_UNITS = ['Case', 'Packet', 'Piece'];
+
 const ItemForm: React.FC<ItemFormProps> = ({ item, onSubmit, onCancel, companyId }) => {
-  const { companies } = useCompany();
   const { filteredGodowns } = useInventory();
 
   const [formData, setFormData] = useState<Omit<Item, 'id' | 'createdAt'>>({
-    companyId: companyId,
+    companyId,
     itemId: '',
     name: '',
     type: 'GST',
@@ -30,198 +36,212 @@ const ItemForm: React.FC<ItemFormProps> = ({ item, onSubmit, onCancel, companyId
     gstPercentage: 18,
     godownId: '',
     stockQuantity: 0,
+    salesUnit: 'Piece',
   });
 
-  // Filter godowns by the selected company
-  const companyGodowns = filteredGodowns.filter(godown => godown.companyId === companyId);
-
+  // Initialize form with item data if editing
   useEffect(() => {
     if (item) {
-      const { id, createdAt, ...rest } = item;
-      setFormData(rest);
+      setFormData({
+        companyId: item.companyId,
+        itemId: item.itemId,
+        name: item.name,
+        type: item.type,
+        unitPrice: item.unitPrice,
+        gstPercentage: item.gstPercentage,
+        godownId: item.godownId,
+        stockQuantity: item.stockQuantity,
+        salesUnit: item.salesUnit || 'Piece', // Default to 'Piece' if not set
+      });
     } else {
-      // Generate a new itemId for new items
-      setFormData(prev => ({
-        ...prev,
-        itemId: `SKU${Math.floor(1000 + Math.random() * 9000)}`,
-        companyId: companyId,
-        godownId: companyGodowns.length > 0 ? companyGodowns[0].id : '',
-      }));
+      // Reset form if not editing
+      setFormData({
+        companyId,
+        itemId: '',
+        name: '',
+        type: 'GST',
+        unitPrice: 0,
+        gstPercentage: 18,
+        godownId: filteredGodowns.length > 0 ? filteredGodowns[0].id : '',
+        stockQuantity: 0,
+        salesUnit: 'Piece',
+      });
     }
-  }, [item, companyId, companyGodowns]);
+  }, [item, companyId, filteredGodowns]);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'unitPrice' || name === 'stockQuantity' || name === 'gstPercentage' 
-        ? parseFloat(value) || 0
-        : value,
+      [name]: type === 'number' ? parseFloat(value) : value,
     }));
   };
 
-  const handleSelectChange = (name: string, value: string) => {
+  const handleSelectChange = (field: string, value: string) => {
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [field]: value,
+    }));
+  };
+
+  const handleNumberChange = (field: string, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value === '' ? 0 : parseFloat(value),
+    }));
+  };
+
+  const handleTypeChange = (value: 'GST' | 'NON-GST') => {
+    setFormData((prev) => ({
+      ...prev,
+      type: value,
+      // Reset GST percentage if type is NON-GST
+      gstPercentage: value === 'NON-GST' ? undefined : prev.gstPercentage || 18,
     }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Ensure the company ID is set
-    const updatedFormData = {
-      ...formData,
-      companyId: companyId,
-    };
-    
-    onSubmit(updatedFormData);
+    onSubmit(formData);
   };
 
-  const selectedCompany = companies.find(c => c.id === companyId);
-
-  if (!selectedCompany) {
-    return (
-      <div className="text-center p-4">
-        <p className="text-red-500">Please select a company first</p>
-      </div>
-    );
-  }
-
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          {item ? 'Edit Item' : 'Add New Item'} 
-          <span className="text-sm font-normal ml-2 text-gray-500">
-            (Company: {selectedCompany.name})
-          </span>
-        </CardTitle>
-      </CardHeader>
-      <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="itemId">Item ID *</Label>
-              <Input
-                id="itemId"
-                name="itemId"
-                value={formData.itemId}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="name">Item Name *</Label>
-              <Input
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-              />
-            </div>
+    <Card className="p-6">
+      <h3 className="text-lg font-semibold mb-4">
+        {item ? 'Edit Item' : 'Add New Item'}
+      </h3>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="itemId">Item ID</Label>
+            <Input
+              id="itemId"
+              name="itemId"
+              value={formData.itemId}
+              onChange={handleChange}
+              placeholder="Enter item ID"
+              required
+            />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="type">Item Type *</Label>
-              <Select 
-                value={formData.type} 
-                onValueChange={(value) => handleSelectChange('type', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="GST">GST Item</SelectItem>
-                  <SelectItem value="NON-GST">Non-GST Item</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="unitPrice">Unit Price *</Label>
-              <Input
-                id="unitPrice"
-                name="unitPrice"
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.unitPrice}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="gstPercentage">
-                GST % {formData.type === 'NON-GST' && '(not applicable)'}
-              </Label>
+          <div>
+            <Label htmlFor="name">Item Name</Label>
+            <Input
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              placeholder="Enter item name"
+              required
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="type">Item Type</Label>
+            <Select
+              value={formData.type}
+              onValueChange={(value: 'GST' | 'NON-GST') => handleTypeChange(value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select item type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="GST">GST</SelectItem>
+                <SelectItem value="NON-GST">NON-GST</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="unitPrice">Unit Price</Label>
+            <Input
+              id="unitPrice"
+              name="unitPrice"
+              type="number"
+              min="0"
+              step="0.01"
+              value={formData.unitPrice}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          {formData.type === 'GST' && (
+            <div>
+              <Label htmlFor="gstPercentage">GST Percentage (%)</Label>
               <Input
                 id="gstPercentage"
                 name="gstPercentage"
                 type="number"
                 min="0"
-                max="28"
-                value={formData.gstPercentage || 0}
+                max="100"
+                value={formData.gstPercentage || ''}
                 onChange={handleChange}
-                disabled={formData.type === 'NON-GST'}
+                required={formData.type === 'GST'}
               />
             </div>
+          )}
+
+          <div>
+            <Label htmlFor="godownId">Godown</Label>
+            <Select
+              value={formData.godownId}
+              onValueChange={(value) => handleSelectChange('godownId', value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select godown" />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredGodowns.map((godown) => (
+                  <SelectItem key={godown.id} value={godown.id}>
+                    {godown.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="godownId">Godown *</Label>
-              <Select 
-                value={formData.godownId} 
-                onValueChange={(value) => handleSelectChange('godownId', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select godown" />
-                </SelectTrigger>
-                <SelectContent>
-                  {companyGodowns.map((godown) => (
-                    <SelectItem key={godown.id} value={godown.id}>
-                      {godown.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {companyGodowns.length === 0 && (
-                <p className="text-sm text-red-500 mt-1">
-                  No godowns found for this company. Please add a godown first.
-                </p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="stockQuantity">Stock Quantity *</Label>
-              <Input
-                id="stockQuantity"
-                name="stockQuantity"
-                type="number"
-                min="0"
-                value={formData.stockQuantity}
-                onChange={handleChange}
-                required
-              />
-            </div>
+          <div>
+            <Label htmlFor="stockQuantity">Stock Quantity</Label>
+            <Input
+              id="stockQuantity"
+              name="stockQuantity"
+              type="number"
+              min="0"
+              value={formData.stockQuantity}
+              onChange={handleChange}
+              required
+            />
           </div>
-        </CardContent>
 
-        <CardFooter className="flex justify-between">
+          <div>
+            <Label htmlFor="salesUnit">Sales Unit</Label>
+            <Select
+              value={formData.salesUnit}
+              onValueChange={(value) => handleSelectChange('salesUnit', value as 'Case' | 'Packet' | 'Piece')}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select sales unit" />
+              </SelectTrigger>
+              <SelectContent>
+                {SALES_UNITS.map((unit) => (
+                  <SelectItem key={unit} value={unit}>
+                    {unit}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 mt-4">
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button 
-            type="submit"
-            disabled={companyGodowns.length === 0}
-          >
-            {item ? 'Update Item' : 'Add Item'}
-          </Button>
-        </CardFooter>
+          <Button type="submit">{item ? 'Update' : 'Save'}</Button>
+        </div>
       </form>
     </Card>
   );

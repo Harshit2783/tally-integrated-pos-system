@@ -34,6 +34,7 @@ export interface Item {
   gstPercentage?: number;
   godownId: string;
   stockQuantity: number;
+  salesUnit: 'Case' | 'Packet' | 'Piece';
   createdAt: string;
 }
 

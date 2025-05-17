@@ -78,6 +78,7 @@ export const items: Item[] = [
     gstPercentage: 18,
     godownId: '1',
     stockQuantity: 50,
+    salesUnit: 'Piece',
     createdAt: new Date().toISOString()
   },
   {
@@ -90,6 +91,7 @@ export const items: Item[] = [
     gstPercentage: 12,
     godownId: '1',
     stockQuantity: 100,
+    salesUnit: 'Piece',
     createdAt: new Date().toISOString()
   },
   {
@@ -101,6 +103,7 @@ export const items: Item[] = [
     unitPrice: 50,
     godownId: '2',
     stockQuantity: 500,
+    salesUnit: 'Packet',
     createdAt: new Date().toISOString()
   },
   {
@@ -113,6 +116,7 @@ export const items: Item[] = [
     gstPercentage: 18,
     godownId: '3',
     stockQuantity: 30,
+    salesUnit: 'Piece',
     createdAt: new Date().toISOString()
   },
   {
@@ -125,6 +129,7 @@ export const items: Item[] = [
     gstPercentage: 12,
     godownId: '3',
     stockQuantity: 45,
+    salesUnit: 'Piece',
     createdAt: new Date().toISOString()
   }
 ];
@@ -176,7 +181,7 @@ export const sales: Sale[] = [
         unitPrice: 50,
         totalPrice: 250,
         totalAmount: 250,
-        salesUnit: 'Piece'
+        salesUnit: 'Packet'
       }
     ],
     createdAt: new Date().toISOString()

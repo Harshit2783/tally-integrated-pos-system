@@ -16,7 +16,7 @@ interface InventoryContextType {
   addGodown: (godown: Omit<Godown, 'id' | 'createdAt'>) => void;
   updateGodown: (godown: Godown) => void;
   deleteGodown: (id: string) => void;
-  updateStock: (itemId: string, quantity: number) => void;
+  updateStock: (itemId: string, quantity: number, salesUnit?: string) => void;
   getItemsByCompany: (companyId: string) => Item[];
   getGodownsByCompany: (companyId: string) => Godown[];
 }
@@ -104,11 +104,38 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
     toast.success('Godown deleted successfully');
   };
 
-  const updateStock = (itemId: string, quantity: number) => {
+  const updateStock = (itemId: string, quantity: number, salesUnit?: string) => {
     setItems((prev) =>
       prev.map((item) => {
         if (item.id === itemId) {
-          const newStockQuantity = item.stockQuantity - quantity;
+          let adjustedQuantity = quantity;
+          
+          // If salesUnit is provided and different from the item's unit, adjust quantity accordingly
+          if (salesUnit && salesUnit !== item.salesUnit) {
+            // Define conversion rates between units
+            const conversionRates: Record<string, Record<string, number>> = {
+              'Case': {
+                'Packet': 12, // 1 Case = 12 Packets
+                'Piece': 144, // 1 Case = 144 Pieces
+              },
+              'Packet': {
+                'Case': 1/12, // 1 Packet = 1/12 Cases
+                'Piece': 12, // 1 Packet = 12 Pieces
+              },
+              'Piece': {
+                'Case': 1/144, // 1 Piece = 1/144 Cases
+                'Packet': 1/12, // 1 Piece = 1/12 Packets
+              }
+            };
+            
+            // Get conversion rate
+            const conversionRate = conversionRates[salesUnit][item.salesUnit];
+            
+            // Apply conversion
+            adjustedQuantity = quantity * conversionRate;
+          }
+          
+          const newStockQuantity = item.stockQuantity - adjustedQuantity;
           if (newStockQuantity < 0) {
             toast.error(`Not enough stock for ${item.name}`);
             return item;
