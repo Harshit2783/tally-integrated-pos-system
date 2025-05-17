@@ -1,21 +1,26 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSales } from '../../contexts/SalesContext';
 import { Sale } from '../../types';
 import { useInventory } from '../../contexts/InventoryContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Calendar, ShoppingCart, FileText, Printer } from 'lucide-react';
+import { Calendar, ShoppingCart, FileText, Printer, FilePdf } from 'lucide-react';
 import { format } from 'date-fns';
 import { generateTallyXML, pushToTally } from '../../utils/tallyUtils';
 import { useCompany } from '../../contexts/CompanyContext';
 import { toast } from 'sonner';
+import PrintBillModal from './PrintBillModal';
 
 const SalesList: React.FC = () => {
   const { filteredSales } = useSales();
   const { filteredGodowns } = useInventory();
   const { currentCompany } = useCompany();
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [printingSale, setPrintingSale] = useState<Sale | null>(null);
+  const [printingMultipleSales, setPrintingMultipleSales] = useState<Sale[] | null>(null);
+  const [printType, setPrintType] = useState<'company' | 'consolidated'>('company');
   
   const godownNameMap = filteredGodowns.reduce((acc, godown) => {
     acc[godown.id] = godown.name;
@@ -44,11 +49,57 @@ const SalesList: React.FC = () => {
     }
   };
 
-  const handlePrint = (sale: Sale) => {
-    // In a real app, this would generate a printable receipt
-    console.log('Printing sale:', sale);
-    toast.success('Preparing bill for printing...');
+  const handlePrintCompanyBill = (sale: Sale) => {
+    setPrintingSale(sale);
+    setPrintingMultipleSales(null);
+    setPrintType('company');
+    setIsPrintModalOpen(true);
+    toast.success('Preparing company bill for printing...');
   };
+
+  const handlePrintConsolidatedBill = () => {
+    // Group sales by customer and date
+    const salesByCustomer: Record<string, Sale[]> = {};
+    
+    filteredSales.forEach(sale => {
+      const key = `${sale.customerName}-${sale.date}`;
+      if (!salesByCustomer[key]) {
+        salesByCustomer[key] = [];
+      }
+      salesByCustomer[key].push(sale);
+    });
+    
+    // Get a list of unique customerName-date combinations
+    const uniqueCustomerDateCombos = Object.keys(salesByCustomer);
+    
+    if (uniqueCustomerDateCombos.length > 0) {
+      // For now, just use the first customer-date combo
+      const firstCombo = uniqueCustomerDateCombos[0];
+      const salesForCustomer = salesByCustomer[firstCombo];
+      
+      setPrintingSale(null);
+      setPrintingMultipleSales(salesForCustomer);
+      setPrintType('consolidated');
+      setIsPrintModalOpen(true);
+      toast.success('Preparing consolidated bill for printing...');
+    } else {
+      toast.error('No sales found to print');
+    }
+  };
+
+  // Group sales by customer and date
+  const salesByCustomerAndDate = filteredSales.reduce<{[key: string]: {customer: string, date: string, sales: Sale[]}}>((acc, sale) => {
+    const key = `${sale.customerName}-${sale.date}`;
+    if (!acc[key]) {
+      acc[key] = {
+        customer: sale.customerName,
+        date: sale.date,
+        sales: []
+      };
+    }
+    acc[key].sales.push(sale);
+    return acc;
+  }, {});
 
   if (filteredSales.length === 0) {
     return (
@@ -60,85 +111,122 @@ const SalesList: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-4">
-        {filteredSales.map((sale) => (
-          <Card key={sale.id} className="overflow-hidden">
-            <div className="flex flex-col md:flex-row">
-              <div className="md:w-1/4 bg-gray-50 p-6 flex flex-col justify-between">
-                <div>
-                  <div className="inline-block px-3 py-1 rounded-full text-xs font-medium mb-3"
-                    style={{
-                      backgroundColor: sale.billType === 'GST' ? '#dbeafe' : '#dcfce7',
-                      color: sale.billType === 'GST' ? '#1e40af' : '#166534',
-                    }}
-                  >
-                    {sale.billType} Bill
-                  </div>
-                  <h3 className="font-semibold text-lg">{sale.billNumber}</h3>
-                  <div className="flex items-center text-sm text-gray-500 mt-1">
-                    <Calendar size={14} className="mr-1" />
-                    {format(new Date(sale.date), 'dd MMM yyyy')}
-                  </div>
-                </div>
-                
-                <div className="text-lg font-bold mt-4">
-                  ₹{sale.totalAmount.toFixed(2)}
-                </div>
-              </div>
-              
-              <div className="p-6 flex-1">
-                <div className="flex flex-col md:flex-row md:justify-between">
-                  <div className="mb-4 md:mb-0">
-                    <h4 className="font-medium">Customer</h4>
-                    <p className="text-gray-800">{sale.customerName}</p>
-                  </div>
-                  
-                  <div>
-                    <h4 className="font-medium">Godown</h4>
-                    <p className="text-gray-800">{godownNameMap[sale.godownId] || 'Unknown'}</p>
-                  </div>
-                </div>
-                
-                <div className="mt-4">
-                  <h4 className="font-medium">Items</h4>
-                  <p className="text-gray-800">
-                    {sale.items.length} {sale.items.length === 1 ? 'item' : 'items'} in total
-                  </p>
-                </div>
-                
-                <div className="flex flex-wrap gap-2 mt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleViewDetails(sale)}
-                  >
-                    <FileText size={16} className="mr-1" />
-                    View Details
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePushToTally(sale)}
-                  >
-                    <ShoppingCart size={16} className="mr-1" />
-                    Push to Tally
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePrint(sale)}
-                  >
-                    <Printer size={16} className="mr-1" />
-                    Print Bill
-                  </Button>
-                </div>
-              </div>
+      {/* Add consolidated bill button if there are sales */}
+      {filteredSales.length > 0 && (
+        <div className="flex justify-end">
+          <Button 
+            variant="outline" 
+            onClick={handlePrintConsolidatedBill}
+          >
+            <FilePdf size={16} className="mr-2" />
+            Print Consolidated Bill
+          </Button>
+        </div>
+      )}
+
+      {/* Sales by customer and date */}
+      {Object.entries(salesByCustomerAndDate).map(([key, group]) => (
+        <div key={key} className="border rounded-md p-4 mb-4">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h3 className="text-lg font-medium">Customer: {group.customer}</h3>
+              <p className="text-sm text-gray-600">Date: {format(new Date(group.date), 'dd MMM yyyy')}</p>
             </div>
-          </Card>
-        ))}
-      </div>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setPrintingSale(null);
+                setPrintingMultipleSales(group.sales);
+                setPrintType('consolidated');
+                setIsPrintModalOpen(true);
+              }}
+            >
+              <FilePdf size={16} className="mr-2" />
+              Print All Bills
+            </Button>
+          </div>
+          
+          <div className="grid grid-cols-1 gap-4">
+            {group.sales.map((sale) => (
+              <Card key={sale.id} className="overflow-hidden">
+                <div className="flex flex-col md:flex-row">
+                  <div className="md:w-1/4 bg-gray-50 p-6 flex flex-col justify-between">
+                    <div>
+                      <div className="inline-block px-3 py-1 rounded-full text-xs font-medium mb-3"
+                        style={{
+                          backgroundColor: sale.billType === 'GST' ? '#dbeafe' : '#dcfce7',
+                          color: sale.billType === 'GST' ? '#1e40af' : '#166534',
+                        }}
+                      >
+                        {sale.billType} Bill
+                      </div>
+                      <h3 className="font-semibold text-lg">{sale.billNumber}</h3>
+                      <div className="flex items-center text-sm text-gray-500 mt-1">
+                        <Calendar size={14} className="mr-1" />
+                        {format(new Date(sale.date), 'dd MMM yyyy')}
+                      </div>
+                    </div>
+                    
+                    <div className="text-lg font-bold mt-4">
+                      ₹{sale.totalAmount.toFixed(2)}
+                    </div>
+                  </div>
+                  
+                  <div className="p-6 flex-1">
+                    <div className="flex flex-col md:flex-row md:justify-between">
+                      <div className="mb-4 md:mb-0">
+                        <h4 className="font-medium">Customer</h4>
+                        <p className="text-gray-800">{sale.customerName}</p>
+                      </div>
+                      
+                      <div>
+                        <h4 className="font-medium">Godown</h4>
+                        <p className="text-gray-800">{godownNameMap[sale.godownId] || 'Unknown'}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4">
+                      <h4 className="font-medium">Items</h4>
+                      <p className="text-gray-800">
+                        {sale.items.length} {sale.items.length === 1 ? 'item' : 'items'} in total
+                      </p>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2 mt-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewDetails(sale)}
+                      >
+                        <FileText size={16} className="mr-1" />
+                        View Details
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePushToTally(sale)}
+                      >
+                        <ShoppingCart size={16} className="mr-1" />
+                        Push to Tally
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePrintCompanyBill(sale)}
+                      >
+                        <FilePdf size={16} className="mr-1" />
+                        Print Bill
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      ))}
       
       {selectedSale && (
         <Card className="p-6">
@@ -191,6 +279,15 @@ const SalesList: React.FC = () => {
           </div>
         </Card>
       )}
+      
+      {/* Print Bill Modal */}
+      <PrintBillModal 
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+        sale={printingSale || undefined}
+        sales={printingMultipleSales || undefined}
+        printType={printType}
+      />
     </div>
   );
 };
