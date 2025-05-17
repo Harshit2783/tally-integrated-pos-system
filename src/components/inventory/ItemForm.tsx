@@ -14,22 +14,26 @@ interface ItemFormProps {
   item?: Item;
   onSubmit: (formData: Omit<Item, 'id' | 'createdAt'>) => void;
   onCancel: () => void;
+  companyId: string;
 }
 
-const ItemForm: React.FC<ItemFormProps> = ({ item, onSubmit, onCancel }) => {
-  const { currentCompany } = useCompany();
+const ItemForm: React.FC<ItemFormProps> = ({ item, onSubmit, onCancel, companyId }) => {
+  const { companies } = useCompany();
   const { filteredGodowns } = useInventory();
 
   const [formData, setFormData] = useState<Omit<Item, 'id' | 'createdAt'>>({
-    companyId: currentCompany?.id || '',
+    companyId: companyId,
     itemId: '',
     name: '',
     type: 'GST',
     unitPrice: 0,
     gstPercentage: 18,
-    godownId: filteredGodowns.length > 0 ? filteredGodowns[0].id : '',
+    godownId: '',
     stockQuantity: 0,
   });
+
+  // Filter godowns by the selected company
+  const companyGodowns = filteredGodowns.filter(godown => godown.companyId === companyId);
 
   useEffect(() => {
     if (item) {
@@ -40,11 +44,11 @@ const ItemForm: React.FC<ItemFormProps> = ({ item, onSubmit, onCancel }) => {
       setFormData(prev => ({
         ...prev,
         itemId: `SKU${Math.floor(1000 + Math.random() * 9000)}`,
-        companyId: currentCompany?.id || '',
-        godownId: filteredGodowns.length > 0 ? filteredGodowns[0].id : '',
+        companyId: companyId,
+        godownId: companyGodowns.length > 0 ? companyGodowns[0].id : '',
       }));
     }
-  }, [item, currentCompany, filteredGodowns]);
+  }, [item, companyId, companyGodowns]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement>
@@ -67,12 +71,19 @@ const ItemForm: React.FC<ItemFormProps> = ({ item, onSubmit, onCancel }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentCompany) return;
     
-    onSubmit(formData);
+    // Ensure the company ID is set
+    const updatedFormData = {
+      ...formData,
+      companyId: companyId,
+    };
+    
+    onSubmit(updatedFormData);
   };
 
-  if (!currentCompany) {
+  const selectedCompany = companies.find(c => c.id === companyId);
+
+  if (!selectedCompany) {
     return (
       <div className="text-center p-4">
         <p className="text-red-500">Please select a company first</p>
@@ -83,7 +94,12 @@ const ItemForm: React.FC<ItemFormProps> = ({ item, onSubmit, onCancel }) => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{item ? 'Edit Item' : 'Add New Item'}</CardTitle>
+        <CardTitle>
+          {item ? 'Edit Item' : 'Add New Item'} 
+          <span className="text-sm font-normal ml-2 text-gray-500">
+            (Company: {selectedCompany.name})
+          </span>
+        </CardTitle>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
@@ -167,13 +183,18 @@ const ItemForm: React.FC<ItemFormProps> = ({ item, onSubmit, onCancel }) => {
                   <SelectValue placeholder="Select godown" />
                 </SelectTrigger>
                 <SelectContent>
-                  {filteredGodowns.map((godown) => (
+                  {companyGodowns.map((godown) => (
                     <SelectItem key={godown.id} value={godown.id}>
                       {godown.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {companyGodowns.length === 0 && (
+                <p className="text-sm text-red-500 mt-1">
+                  No godowns found for this company. Please add a godown first.
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="stockQuantity">Stock Quantity *</Label>
@@ -194,7 +215,10 @@ const ItemForm: React.FC<ItemFormProps> = ({ item, onSubmit, onCancel }) => {
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button type="submit">
+          <Button 
+            type="submit"
+            disabled={companyGodowns.length === 0}
+          >
             {item ? 'Update Item' : 'Add Item'}
           </Button>
         </CardFooter>

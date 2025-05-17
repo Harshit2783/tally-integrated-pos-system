@@ -17,6 +17,8 @@ interface InventoryContextType {
   updateGodown: (godown: Godown) => void;
   deleteGodown: (id: string) => void;
   updateStock: (itemId: string, quantity: number) => void;
+  getItemsByCompany: (companyId: string) => Item[];
+  getGodownsByCompany: (companyId: string) => Godown[];
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
@@ -39,6 +41,14 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
       setFilteredGodowns([]);
     }
   }, [currentCompany, items, godowns]);
+
+  const getItemsByCompany = (companyId: string): Item[] => {
+    return items.filter(item => item.companyId === companyId);
+  };
+
+  const getGodownsByCompany = (companyId: string): Godown[] => {
+    return godowns.filter(godown => godown.companyId === companyId);
+  };
 
   const addItem = (itemData: Omit<Item, 'id' | 'createdAt'>) => {
     const newItem: Item = {
@@ -124,6 +134,8 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
         updateGodown,
         deleteGodown,
         updateStock,
+        getItemsByCompany,
+        getGodownsByCompany,
       }}
     >
       {children}

@@ -12,18 +12,24 @@ import { useCompany } from '../../contexts/CompanyContext';
 interface ItemListProps {
   onEdit: (item: Item) => void;
   onDelete: (itemId: string) => void;
+  companyId: string; // Add companyId prop
 }
 
-const ItemList: React.FC<ItemListProps> = ({ onEdit, onDelete }) => {
-  const { filteredItems, filteredGodowns } = useInventory();
-  const { companies, currentCompany } = useCompany();
+const ItemList: React.FC<ItemListProps> = ({ onEdit, onDelete, companyId }) => {
+  const { items, filteredGodowns } = useInventory();
+  const { companies } = useCompany();
   
   const [search, setSearch] = useState('');
   const [filterGodown, setFilterGodown] = useState('all');
   const [filterType, setFilterType] = useState<'all' | 'GST' | 'NON-GST'>('all');
-  const [filterCompany, setFilterCompany] = useState(currentCompany?.id || 'all');
 
-  const godownNameMap = filteredGodowns.reduce((acc, godown) => {
+  // Filter items by the specified company
+  const companyItems = items.filter(item => item.companyId === companyId);
+  
+  // Filter godowns by the specified company
+  const companyGodowns = filteredGodowns.filter(godown => godown.companyId === companyId);
+  
+  const godownNameMap = companyGodowns.reduce((acc, godown) => {
     acc[godown.id] = godown.name;
     return acc;
   }, {} as Record<string, string>);
@@ -33,7 +39,7 @@ const ItemList: React.FC<ItemListProps> = ({ onEdit, onDelete }) => {
     return acc;
   }, {} as Record<string, string>);
 
-  const filteredResults = filteredItems.filter((item) => {
+  const filteredResults = companyItems.filter((item) => {
     const matchesSearch = 
       search === '' || 
       item.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -41,15 +47,16 @@ const ItemList: React.FC<ItemListProps> = ({ onEdit, onDelete }) => {
     
     const matchesGodown = filterGodown === 'all' || item.godownId === filterGodown;
     const matchesType = filterType === 'all' || item.type === filterType;
-    const matchesCompany = filterCompany === 'all' || item.companyId === filterCompany;
     
-    return matchesSearch && matchesGodown && matchesType && matchesCompany;
+    return matchesSearch && matchesGodown && matchesType;
   });
 
-  if (filteredItems.length === 0) {
+  const selectedCompany = companies.find(c => c.id === companyId);
+
+  if (companyItems.length === 0) {
     return (
       <Card className="p-6 text-center">
-        <p className="text-gray-500">No items found. Please add items to get started.</p>
+        <p className="text-gray-500">No items found for {selectedCompany?.name || 'the selected company'}. Please add items to get started.</p>
       </Card>
     );
   }
@@ -68,27 +75,13 @@ const ItemList: React.FC<ItemListProps> = ({ onEdit, onDelete }) => {
           />
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
-          <Select value={filterCompany} onValueChange={setFilterCompany}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Filter by company" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Companies</SelectItem>
-              {companies.map((company) => (
-                <SelectItem key={company.id} value={company.id}>
-                  {company.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
           <Select value={filterGodown} onValueChange={setFilterGodown}>
             <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Select Godown" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Godowns</SelectItem>
-              {filteredGodowns.map((godown) => (
+              {companyGodowns.map((godown) => (
                 <SelectItem key={godown.id} value={godown.id}>
                   {godown.name}
                 </SelectItem>
@@ -119,7 +112,6 @@ const ItemList: React.FC<ItemListProps> = ({ onEdit, onDelete }) => {
             <tr>
               <th className="px-4 py-3">Item ID</th>
               <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Company</th>
               <th className="px-4 py-3">Type</th>
               <th className="px-4 py-3">Unit Price</th>
               <th className="px-4 py-3">GST %</th>
@@ -133,7 +125,6 @@ const ItemList: React.FC<ItemListProps> = ({ onEdit, onDelete }) => {
               <tr key={item.id} className="bg-white border-b">
                 <td className="px-4 py-3">{item.itemId}</td>
                 <td className="px-4 py-3 font-medium">{item.name}</td>
-                <td className="px-4 py-3">{companyNameMap[item.companyId] || 'Unknown'}</td>
                 <td className="px-4 py-3">
                   <span className={`px-2 py-1 rounded text-xs ${
                     item.type === 'GST' 
