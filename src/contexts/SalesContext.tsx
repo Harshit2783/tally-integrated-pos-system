@@ -47,9 +47,9 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   }, [currentCompany, sales]);
 
   const addSaleItem = (saleItem: SaleItem) => {
-    // Check if item already exists in current sale items
+    // Check if item already exists in current sale items with the same company
     const existingItemIndex = currentSaleItems.findIndex(
-      item => item.itemId === saleItem.itemId
+      item => item.itemId === saleItem.itemId && item.companyId === saleItem.companyId
     );
     
     if (existingItemIndex !== -1) {
@@ -97,11 +97,6 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   const createSale = (saleData: Omit<Sale, 'id' | 'items' | 'createdAt'>) => {
-    if (!currentCompany) {
-      toast.error('No company selected');
-      return;
-    }
-    
     if (currentSaleItems.length === 0) {
       toast.error('No items in sale');
       return;
@@ -130,7 +125,6 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     
     // Add sale to list
     setSales(prev => [...prev, newSale]);
-    clearSaleItems();
     
     toast.success('Sale created successfully');
     

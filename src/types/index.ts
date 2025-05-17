@@ -39,13 +39,16 @@ export interface Item {
 
 export interface SaleItem {
   itemId: string;
+  companyId: string;
+  companyName: string;
   name: string;
   quantity: number;
   unitPrice: number;
   gstPercentage?: number;
-  gstAmount?: number; // Added this field as it's being used
-  totalPrice: number; // Added this field as it's being used
+  gstAmount?: number;
+  totalPrice: number;
   totalAmount: number;
+  salesUnit: string;
 }
 
 // Customer Type
