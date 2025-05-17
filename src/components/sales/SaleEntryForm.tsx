@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useInventory } from '../../contexts/InventoryContext';
@@ -27,6 +28,7 @@ const SaleEntryForm: React.FC = () => {
   const [customerName, setCustomerName] = useState<string>('');
   const [selectedGodownId, setSelectedGodownId] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'GST' | 'NON-GST'>('GST');
+  const [salesUnit, setSalesUnit] = useState<string>('Piece');
 
   // Group items by GST and Non-GST
   const gstItems = filteredItems.filter((item) => item.type === 'GST');
@@ -75,6 +77,11 @@ const SaleEntryForm: React.FC = () => {
       return;
     }
 
+    if (!currentCompany) {
+      toast.error('No company selected');
+      return;
+    }
+
     if (quantity <= 0) {
       toast.error('Quantity must be greater than 0');
       return;
@@ -99,6 +106,8 @@ const SaleEntryForm: React.FC = () => {
 
     const saleItem: SaleItem = {
       itemId: selectedItem.id,
+      companyId: currentCompany.id,
+      companyName: currentCompany.name,
       name: selectedItem.name,
       quantity,
       unitPrice: selectedItem.unitPrice,
@@ -106,6 +115,7 @@ const SaleEntryForm: React.FC = () => {
       gstAmount: selectedItem.type === 'GST' ? gstAmount : undefined,
       totalPrice,
       totalAmount: totalPrice,
+      salesUnit: salesUnit,
     };
 
     addSaleItem(saleItem);
@@ -140,6 +150,7 @@ const SaleEntryForm: React.FC = () => {
           billType: 'GST',
           godownId: selectedGodownId,
           totalAmount: gstTotals.total,
+          items: gstSaleItems
         });
       }
 
@@ -152,6 +163,7 @@ const SaleEntryForm: React.FC = () => {
           billType: 'NON-GST',
           godownId: selectedGodownId,
           totalAmount: nonGstTotals.total,
+          items: nonGstSaleItems
         });
       }
     } else if (gstSaleItems.length > 0) {
@@ -163,6 +175,7 @@ const SaleEntryForm: React.FC = () => {
         billType: 'GST',
         godownId: selectedGodownId,
         totalAmount: gstTotals.total,
+        items: gstSaleItems
       });
     } else if (nonGstSaleItems.length > 0) {
       createSale({
@@ -173,6 +186,7 @@ const SaleEntryForm: React.FC = () => {
         billType: 'NON-GST',
         godownId: selectedGodownId,
         totalAmount: nonGstTotals.total,
+        items: nonGstSaleItems
       });
     } else {
       toast.error('No items added to the sale');

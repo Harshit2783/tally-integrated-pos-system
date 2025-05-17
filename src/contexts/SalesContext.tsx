@@ -16,7 +16,7 @@ interface SalesContextType {
   updateSaleItem: (index: number, saleItem: SaleItem) => void;
   removeSaleItem: (index: number) => void;
   clearSaleItems: () => void;
-  createSale: (saleData: Omit<Sale, 'id' | 'items' | 'createdAt'>) => void;
+  createSale: (saleData: Omit<Sale, 'id' | 'createdAt'>) => void;
   getSale: (id: string) => Sale | undefined;
 }
 
@@ -96,14 +96,14 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setCurrentSaleItems([]);
   };
 
-  const createSale = (saleData: Omit<Sale, 'id' | 'items' | 'createdAt'>) => {
-    if (currentSaleItems.length === 0) {
+  const createSale = (saleData: Omit<Sale, 'id' | 'createdAt'>) => {
+    if (!saleData.items || saleData.items.length === 0) {
       toast.error('No items in sale');
       return;
     }
     
-    // Calculate total amount
-    const totalAmount = currentSaleItems.reduce(
+    // Calculate total amount if not provided
+    const totalAmount = saleData.totalAmount || saleData.items.reduce(
       (total, item) => total + item.totalAmount,
       0
     );
@@ -112,14 +112,13 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     const newSale: Sale = {
       ...saleData,
       id: generateId(),
-      billNumber: generateBillNumber(saleData.billType === 'GST' ? 'GST' : 'NON'),
-      items: currentSaleItems,
+      billNumber: saleData.billNumber || generateBillNumber(saleData.billType === 'GST' ? 'GST' : 'NON'),
       totalAmount,
       createdAt: new Date().toISOString(),
     };
     
     // Update stock quantities
-    currentSaleItems.forEach(item => {
+    saleData.items.forEach(item => {
       updateStock(item.itemId, item.quantity);
     });
     

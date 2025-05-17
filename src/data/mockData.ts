@@ -143,13 +143,16 @@ export const sales: Sale[] = [
     items: [
       {
         itemId: '1',
+        companyId: '1',
+        companyName: 'ABC Corporation',
         name: 'Laptop',
         quantity: 1,
         unitPrice: 45000,
         gstPercentage: 18,
         gstAmount: 8100,
         totalPrice: 53100,
-        totalAmount: 53100
+        totalAmount: 53100,
+        salesUnit: 'Piece'
       }
     ],
     createdAt: new Date().toISOString()
@@ -166,11 +169,14 @@ export const sales: Sale[] = [
     items: [
       {
         itemId: '3',
+        companyId: '1',
+        companyName: 'ABC Corporation',
         name: 'Notebook',
         quantity: 5,
         unitPrice: 50,
         totalPrice: 250,
-        totalAmount: 250
+        totalAmount: 250,
+        salesUnit: 'Piece'
       }
     ],
     createdAt: new Date().toISOString()
