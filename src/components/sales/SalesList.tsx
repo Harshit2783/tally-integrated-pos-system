@@ -5,17 +5,21 @@ import { Sale } from '../../types';
 import { useInventory } from '../../contexts/InventoryContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Calendar, ShoppingCart, FileText, Printer } from 'lucide-react';
+import { Calendar, ShoppingCart, FileText, Printer, Download } from 'lucide-react';
 import { format } from 'date-fns';
 import { generateTallyXML, pushToTally } from '../../utils/tallyUtils';
 import { useCompany } from '../../contexts/CompanyContext';
 import { toast } from 'sonner';
+import { PrintBillModal } from './PrintBillModal';
 
 const SalesList: React.FC = () => {
   const { filteredSales } = useSales();
   const { filteredGodowns } = useInventory();
-  const { currentCompany } = useCompany();
+  const { currentCompany, companies } = useCompany();
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [printType, setPrintType] = useState<'single' | 'all'>('single');
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   
   const godownNameMap = filteredGodowns.reduce((acc, godown) => {
     acc[godown.id] = godown.name;
@@ -44,10 +48,15 @@ const SalesList: React.FC = () => {
     }
   };
 
-  const handlePrint = (sale: Sale) => {
-    // In a real app, this would generate a printable receipt
-    console.log('Printing sale:', sale);
-    toast.success('Preparing bill for printing...');
+  const handlePrint = (sale: Sale, companyId?: string) => {
+    setSelectedSale(sale);
+    setPrintType(companyId ? 'single' : 'all');
+    setSelectedCompanyId(companyId || null);
+    setIsPrintModalOpen(true);
+  };
+
+  const handleClosePrintModal = () => {
+    setIsPrintModalOpen(false);
   };
 
   if (filteredSales.length === 0) {
@@ -131,7 +140,16 @@ const SalesList: React.FC = () => {
                     onClick={() => handlePrint(sale)}
                   >
                     <Printer size={16} className="mr-1" />
-                    Print Bill
+                    Print All Bills
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePrint(sale, sale.companyId)}
+                  >
+                    <Download size={16} className="mr-1" />
+                    Download Bill
                   </Button>
                 </div>
               </div>
@@ -190,6 +208,16 @@ const SalesList: React.FC = () => {
             </table>
           </div>
         </Card>
+      )}
+
+      {isPrintModalOpen && selectedSale && (
+        <PrintBillModal 
+          isOpen={isPrintModalOpen} 
+          onClose={handleClosePrintModal} 
+          sale={selectedSale} 
+          printType={printType}
+          selectedCompanyId={selectedCompanyId}
+        />
       )}
     </div>
   );

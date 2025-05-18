@@ -31,6 +31,7 @@ export interface Item {
   name: string;
   type: 'GST' | 'NON-GST';
   unitPrice: number;
+  mrp?: number;
   gstPercentage?: number;
   godownId: string;
   stockQuantity: number;
@@ -44,10 +45,13 @@ export interface SaleItem {
   companyName: string;
   name: string;
   quantity: number;
-  unitPrice: number;
+  unitPrice: number; // Exclusive cost (without GST)
+  mrp?: number; // MRP (inclusive of GST)
+  discountValue?: number; // Discount amount in rupees
+  discountPercentage?: number; // Discount percentage
   gstPercentage?: number;
   gstAmount?: number;
-  totalPrice: number;
+  totalPrice: number; // Final price after GST and discount
   totalAmount: number;
   salesUnit: string;
 }
@@ -74,6 +78,9 @@ export interface Sale {
   billType: 'GST' | 'NON-GST';
   godownId: string;
   totalAmount: number;
+  totalDiscount?: number;
+  totalExclusiveCost?: number;
+  totalGst?: number;
   items: SaleItem[];
   createdAt: string;
 }
