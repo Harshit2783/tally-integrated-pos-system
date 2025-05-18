@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useInventory } from '../../contexts/InventoryContext';
@@ -9,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ShoppingCart, Plus, Trash2, Printer, Download } from 'lucide-react';
+import { ShoppingCart, Plus, Trash2, Printer, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
   Table,
@@ -64,9 +63,10 @@ const EnhancedSaleForm: React.FC = () => {
 
   // Bill modal state
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
-  const [printType, setPrintType] = useState<'single' | 'all'>('all');
+  const [printType, setPrintType] = useState<'single' | 'all' | 'consolidated'>('all');
   const [selectedPrintCompanyId, setSelectedPrintCompanyId] = useState<string | null>(null);
   const [createdSale, setCreatedSale] = useState<any>(null);
+  const [consolidatedPreviewOpen, setConsolidatedPreviewOpen] = useState(false);
 
   // Summary calculations
   const [subtotal, setSubtotal] = useState<number>(0);
@@ -422,8 +422,8 @@ const EnhancedSaleForm: React.FC = () => {
     });
     
     if (createdSales.length > 0) {
-      setCreatedSale(createdSales[0]);
-      setPrintType('all');
+      setCreatedSale(createdSales);
+      setPrintType(createdSales.length > 1 ? 'consolidated' : 'all');
       setSelectedPrintCompanyId(null);
       setIsPrintModalOpen(true);
     }
@@ -433,42 +433,14 @@ const EnhancedSaleForm: React.FC = () => {
     clearSaleItems();
   };
 
-  // Group items by company for bill actions
-  const itemsByCompany = currentSaleItems.reduce<Record<string, { name: string, items: SaleItem[] }>>((acc, item) => {
-    if (!acc[item.companyId]) {
-      acc[item.companyId] = {
-        name: item.companyName,
-        items: []
-      };
+  const handlePreviewConsolidatedBill = () => {
+    if (currentSaleItems.length === 0) {
+      toast.error('No items added to the sale');
+      return;
     }
-    acc[item.companyId].items.push(item);
-    return acc;
-  }, {});
-
-  // Calculate totals per company
-  const companyTotals = Object.entries(itemsByCompany).map(([companyId, { name, items }]) => {
-    const subtotal = items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
-    const discount = items.reduce((sum, item) => sum + (item.discountValue || 0), 0);
-    const gst = items.reduce((sum, item) => sum + (item.gstAmount || 0), 0);
-    const total = items.reduce((sum, item) => sum + item.totalPrice, 0);
-
-    return {
-      id: companyId,
-      name,
-      subtotal,
-      discount,
-      gst,
-      total
-    };
-  });
-
-  if (companies.length === 0) {
-    return (
-      <Card className="p-6 text-center">
-        <p className="text-red-500">No companies available. Please add a company first.</p>
-      </Card>
-    );
-  }
+    
+    setConsolidatedPreviewOpen(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -798,11 +770,27 @@ const EnhancedSaleForm: React.FC = () => {
       </Card>
       
       {/* Company-wise Summaries */}
-      {companyTotals.length > 0 && (
+      {currentSaleItems.length > 0 && (
         <Card className="p-6">
           <h3 className="text-lg font-semibold mb-4">Company-wise Summary</h3>
           <div className="grid gap-4">
-            {companyTotals.map((company, index) => (
+            {currentSaleItems.reduce((acc, item) => {
+              if (!acc[item.companyId]) {
+                acc[item.companyId] = {
+                  name: item.companyName,
+                  subtotal: 0,
+                  discount: 0,
+                  gst: 0,
+                  total: 0,
+                };
+              }
+              acc[item.companyId].subtotal += item.unitPrice * item.quantity;
+              acc[item.companyId].discount += item.discountValue || 0;
+              acc[item.companyId].gst += item.gstAmount || 0;
+              acc[item.companyId].total += item.totalPrice;
+              return acc;
+            }, {} as Record<string, { name: string; subtotal: number; discount: number; gst: number; total: number; }>)
+            .map((company, index) => (
               <div key={index} className="border rounded-md p-4">
                 <div className="flex justify-between items-center mb-2">
                   <h4 className="font-medium">{company.name}</h4>
@@ -864,6 +852,16 @@ const EnhancedSaleForm: React.FC = () => {
               >
                 <ShoppingCart className="mr-2 h-4 w-4" />
                 Create Bill
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={handlePreviewConsolidatedBill}
+                disabled={currentSaleItems.length === 0 || currentSaleItems.length === 0}
+              >
+                <FileText className="mr-2 h-4 w-4" />
+                Preview Final Bill
               </Button>
               
               <Button 
@@ -933,6 +931,106 @@ const EnhancedSaleForm: React.FC = () => {
           printType={printType}
           selectedCompanyId={selectedPrintCompanyId}
         />
+      )}
+
+      {/* Consolidated Bill Preview */}
+      {consolidatedPreviewOpen && currentSaleItems.length > 0 && (
+        <Dialog open={consolidatedPreviewOpen} onOpenChange={setConsolidatedPreviewOpen}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>Final Bill Preview</DialogTitle>
+            </DialogHeader>
+            <div className="max-h-[70vh] overflow-auto">
+              <div className="p-4 border rounded">
+                <div className="text-center mb-4">
+                  <h2 className="text-xl font-bold">Consolidated Bill</h2>
+                  <p>Date: {new Date().toLocaleDateString()}</p>
+                  <p>Customer: {customerName || "Guest"}</p>
+                </div>
+                
+                {/* Group items by company */}
+                {currentSaleItems.reduce((acc, item) => {
+                  if (!acc[item.companyId]) {
+                    acc[item.companyId] = {
+                      name: item.companyName,
+                      items: []
+                    };
+                  }
+                  acc[item.companyId].items.push(item);
+                  return acc;
+                }, {} as Record<string, { name: string; items: SaleItem[] }>)
+                .map((company, index) => (
+                  <div key={index} className="mb-6">
+                    <h3 className="font-medium text-lg mb-2">{company.name}</h3>
+                    <table className="w-full text-sm">
+                      <thead className="border-b">
+                        <tr>
+                          <th className="py-1 text-left">Item</th>
+                          <th className="py-1 text-center">Qty</th>
+                          <th className="py-1 text-right">MRP</th>
+                          <th className="py-1 text-right">Disc</th>
+                          <th className="py-1 text-right">Excl.</th>
+                          <th className="py-1 text-right">GST</th>
+                          <th className="py-1 text-right">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {company.items.map((item, idx) => (
+                          <tr key={idx} className="border-b border-gray-200">
+                            <td className="py-1">{item.name}</td>
+                            <td className="py-1 text-center">{item.quantity}</td>
+                            <td className="py-1 text-right">₹{(item.mrp || item.unitPrice).toFixed(2)}</td>
+                            <td className="py-1 text-right">₹{(item.discountValue || 0).toFixed(2)}</td>
+                            <td className="py-1 text-right">₹{(item.unitPrice * item.quantity).toFixed(2)}</td>
+                            <td className="py-1 text-right">₹{(item.gstAmount || 0).toFixed(2)}</td>
+                            <td className="py-1 text-right font-medium">₹{item.totalPrice.toFixed(2)}</td>
+                          </tr>
+                        ))}
+                        <tr className="font-medium">
+                          <td colSpan={6} className="py-1 text-right">Company Total:</td>
+                          <td className="py-1 text-right">₹{company.total.toFixed(2)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                ))}
+                
+                {/* Summary */}
+                <div className="border-t pt-4 mt-4">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="text-right text-sm">
+                      <p>Total Quantity:</p>
+                      <p>Total Excl. Cost:</p>
+                      <p>Total Discount:</p>
+                      <p>Total GST:</p>
+                      <p>Round Off:</p>
+                      <p className="font-bold">Grand Total:</p>
+                    </div>
+                    <div className="text-right text-sm">
+                      <p>{currentSaleItems.reduce((sum, item) => sum + item.quantity, 0)}</p>
+                      <p>₹{subtotal.toFixed(2)}</p>
+                      <p>₹{totalDiscount.toFixed(2)}</p>
+                      <p>₹{totalGst.toFixed(2)}</p>
+                      <p>₹{(Math.round(grandTotal) - grandTotal).toFixed(2)}</p>
+                      <p className="font-bold">₹{Math.round(grandTotal).toFixed(2)}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="text-center mt-6 text-sm">
+                  <p>Thank you for your business!</p>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConsolidatedPreviewOpen(false)}>Close</Button>
+              <Button onClick={handleCreateSale}>
+                <Printer className="mr-2 h-4 w-4" />
+                Create & Print Bill
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

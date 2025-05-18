@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Company, Sale, SaleItem } from '../../types';
 import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
@@ -49,7 +48,7 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   description: { width: '25%' },
-  qty: { width: '10%' },
+  qty: { width: '10%', textAlign: 'center' },
   mrp: { width: '15%', textAlign: 'right' },
   discount: { width: '15%', textAlign: 'right' },
   exclCost: { width: '15%', textAlign: 'right' },
@@ -85,6 +84,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: 9,
   },
+  companyHeader: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginTop: 10,
+    marginBottom: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+    borderBottomStyle: 'solid',
+    paddingBottom: 2,
+  },
 });
 
 interface CompanyBillTemplateProps {
@@ -111,7 +120,7 @@ export const CompanyBillTemplate: React.FC<CompanyBillTemplateProps> = ({ compan
 
   return (
     <Document>
-      <Page size={[226, 600]} style={styles.page}>
+      <Page size="BILL" style={styles.page}>
         <View style={styles.header}>
           <Text style={styles.companyName}>{company.name}</Text>
           <Text>{company.address}</Text>
@@ -199,9 +208,15 @@ export const CompanyBillTemplate: React.FC<CompanyBillTemplateProps> = ({ compan
   );
 };
 
-export const ConsolidatedBillTemplate: React.FC<{ sale: Sale }> = ({ sale }) => {
+export const ConsolidatedBillTemplate: React.FC<{ sale: Sale | Sale[] }> = ({ sale }) => {
+  // Handle both single sale and array of sales
+  const sales = Array.isArray(sale) ? sale : [sale];
+  
+  // Extract all items from all sales
+  const allItems = sales.reduce<SaleItem[]>((acc, s) => [...acc, ...s.items], []);
+  
   // Group items by company
-  const itemsByCompany = sale.items.reduce<Record<string, { company: string, items: SaleItem[] }>>((acc, item) => {
+  const itemsByCompany = allItems.reduce<Record<string, { company: string, items: SaleItem[] }>>((acc, item) => {
     if (!acc[item.companyId]) {
       acc[item.companyId] = { 
         company: item.companyName,
@@ -212,33 +227,40 @@ export const ConsolidatedBillTemplate: React.FC<{ sale: Sale }> = ({ sale }) => 
     return acc;
   }, {});
 
-  const totalQuantity = sale.items.reduce((sum, item) => sum + item.quantity, 0);
-  const totalExclusiveCost = sale.items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
-  const totalDiscount = sale.items.reduce((sum, item) => sum + (item.discountValue || 0), 0);
-  const totalGst = sale.items.reduce((sum, item) => sum + (item.gstAmount || 0), 0);
-  const grandTotal = sale.items.reduce((sum, item) => sum + item.totalPrice, 0);
+  // Calculate totals across all items
+  const totalQuantity = allItems.reduce((sum, item) => sum + item.quantity, 0);
+  const totalExclusiveCost = allItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+  const totalDiscount = allItems.reduce((sum, item) => sum + (item.discountValue || 0), 0);
+  const totalGst = allItems.reduce((sum, item) => sum + (item.gstAmount || 0), 0);
+  const grandTotal = allItems.reduce((sum, item) => sum + item.totalPrice, 0);
 
   // Round off calculation
   const roundedGrandTotal = Math.round(grandTotal);
   const roundOff = roundedGrandTotal - grandTotal;
 
   // Check if any item has GST or discount
-  const hasGst = sale.items.some(item => item.gstPercentage && item.gstPercentage > 0);
-  const hasDiscount = sale.items.some(item => item.discountValue && item.discountValue > 0);
+  const hasGst = allItems.some(item => item.gstPercentage && item.gstPercentage > 0);
+  const hasDiscount = allItems.some(item => item.discountValue && item.discountValue > 0);
+  
+  // Get customer name and date from the first sale
+  const customerName = sales[0]?.customerName || 'Guest';
+  const date = sales[0]?.date ? new Date(sales[0].date).toLocaleDateString() : new Date().toLocaleDateString();
+  const billNumber = sales[0]?.billNumber || `FINAL-${Date.now()}`;
 
   return (
     <Document>
-      <Page size={[226, 700]} style={styles.page}>
+      <Page size={[226, 'auto']} style={styles.page}>
         <View style={styles.header}>
           <Text style={styles.companyName}>Consolidated Bill</Text>
-          <Text>Bill No: {sale.billNumber}</Text>
-          <Text>Date: {new Date(sale.date).toLocaleDateString()}</Text>
-          <Text>Customer: {sale.customerName}</Text>
+          <Text>Bill No: {billNumber}</Text>
+          <Text>Date: {date}</Text>
+          <Text>Customer: {customerName}</Text>
         </View>
         
+        {/* Render each company's items */}
         {Object.values(itemsByCompany).map((group, groupIndex) => (
-          <View key={groupIndex} style={[styles.section, { marginTop: 10 }]}>
-            <Text style={{ fontWeight: 'bold', marginBottom: 5 }}>{group.company}</Text>
+          <View key={groupIndex} style={styles.section}>
+            <Text style={styles.companyHeader}>{group.company}</Text>
             <View style={styles.tableContainer}>
               <View style={styles.tableHeader}>
                 <Text style={styles.description}>Item</Text>
@@ -260,7 +282,7 @@ export const ConsolidatedBillTemplate: React.FC<{ sale: Sale }> = ({ sale }) => 
                       {item.discountValue ? `₹${item.discountValue.toFixed(2)}` : '-'}
                     </Text>
                   )}
-                  <Text style={styles.exclCost}>₹{item.unitPrice.toFixed(2)}</Text>
+                  <Text style={styles.exclCost}>₹{(item.unitPrice * item.quantity).toFixed(2)}</Text>
                   {hasGst && (
                     <Text style={styles.gst}>
                       {item.gstPercentage ? `${item.gstPercentage}%` : '-'}
