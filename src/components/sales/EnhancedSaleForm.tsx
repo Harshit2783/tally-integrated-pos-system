@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useInventory } from '../../contexts/InventoryContext';
 import { useSales } from '../../contexts/SalesContext';
@@ -10,20 +10,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ShoppingCart, Plus, Trash2, Printer, FileText } from 'lucide-react';
 import { toast } from 'sonner';
-import { 
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow 
-} from '@/components/ui/table';
-import { 
-  calculateExclusiveCost, 
-  calculateMRP, 
-  calculateFinalPrice,
-  validateCompanyItemsType
-} from '../../utils/pricingUtils';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { calculateExclusiveCost, calculateMRP, calculateFinalPrice } from '../../utils/pricingUtils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { PrintBillModal } from './PrintBillModal';
@@ -355,13 +343,13 @@ const EnhancedSaleForm: React.FC = () => {
     }
 
     // Group items by company for validation and creating bills
-    const itemsByCompany: Record<string, SaleItem[]> = currentSaleItems.reduce<Record<string, SaleItem[]>>((acc, item) => {
-      if (!acc[item.companyId]) {
-        acc[item.companyId] = [];
+    const itemsByCompany: Record<string, SaleItem[]> = {};
+    currentSaleItems.forEach(item => {
+      if (!itemsByCompany[item.companyId]) {
+        itemsByCompany[item.companyId] = [];
       }
-      acc[item.companyId].push(item);
-      return acc;
-    }, {});
+      itemsByCompany[item.companyId].push(item);
+    });
 
     // Validate: each company's items are all GST or all non-GST
     const invalidCompanies: string[] = [];
@@ -441,6 +429,37 @@ const EnhancedSaleForm: React.FC = () => {
     
     setConsolidatedPreviewOpen(true);
   };
+
+  // Company-wise summary calculation
+  const companySummaries = useMemo(() => {
+    const summaries: Record<string, { 
+      name: string; 
+      subtotal: number; 
+      discount: number; 
+      gst: number; 
+      total: number; 
+    }> = {};
+    
+    currentSaleItems.forEach(item => {
+      if (!summaries[item.companyId]) {
+        summaries[item.companyId] = {
+          name: item.companyName,
+          subtotal: 0,
+          discount: 0,
+          gst: 0,
+          total: 0,
+        };
+      }
+      
+      const summary = summaries[item.companyId];
+      summary.subtotal += item.unitPrice * item.quantity;
+      summary.discount += item.discountValue || 0;
+      summary.gst += item.gstAmount || 0;
+      summary.total += item.totalPrice;
+    });
+    
+    return summaries;
+  }, [currentSaleItems]);
 
   return (
     <div className="space-y-6">
@@ -774,23 +793,7 @@ const EnhancedSaleForm: React.FC = () => {
         <Card className="p-6">
           <h3 className="text-lg font-semibold mb-4">Company-wise Summary</h3>
           <div className="grid gap-4">
-            {currentSaleItems.reduce((acc, item) => {
-              if (!acc[item.companyId]) {
-                acc[item.companyId] = {
-                  name: item.companyName,
-                  subtotal: 0,
-                  discount: 0,
-                  gst: 0,
-                  total: 0,
-                };
-              }
-              acc[item.companyId].subtotal += item.unitPrice * item.quantity;
-              acc[item.companyId].discount += item.discountValue || 0;
-              acc[item.companyId].gst += item.gstAmount || 0;
-              acc[item.companyId].total += item.totalPrice;
-              return acc;
-            }, {} as Record<string, { name: string; subtotal: number; discount: number; gst: number; total: number; }>)
-            .map((company, index) => (
+            {Object.values(companySummaries).map((company, index) => (
               <div key={index} className="border rounded-md p-4">
                 <div className="flex justify-between items-center mb-2">
                   <h4 className="font-medium">{company.name}</h4>
@@ -858,7 +861,7 @@ const EnhancedSaleForm: React.FC = () => {
                 variant="outline" 
                 className="w-full"
                 onClick={handlePreviewConsolidatedBill}
-                disabled={currentSaleItems.length === 0 || currentSaleItems.length === 0}
+                disabled={currentSaleItems.length === 0}
               >
                 <FileText className="mr-2 h-4 w-4" />
                 Preview Final Bill
@@ -949,17 +952,7 @@ const EnhancedSaleForm: React.FC = () => {
                 </div>
                 
                 {/* Group items by company */}
-                {currentSaleItems.reduce((acc, item) => {
-                  if (!acc[item.companyId]) {
-                    acc[item.companyId] = {
-                      name: item.companyName,
-                      items: []
-                    };
-                  }
-                  acc[item.companyId].items.push(item);
-                  return acc;
-                }, {} as Record<string, { name: string; items: SaleItem[] }>)
-                .map((company, index) => (
+                {Object.values(companySummaries).map((company, index) => (
                   <div key={index} className="mb-6">
                     <h3 className="font-medium text-lg mb-2">{company.name}</h3>
                     <table className="w-full text-sm">
@@ -975,7 +968,7 @@ const EnhancedSaleForm: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {company.items.map((item, idx) => (
+                        {currentSaleItems.filter(item => item.companyId === company.id).map((item, idx) => (
                           <tr key={idx} className="border-b border-gray-200">
                             <td className="py-1">{item.name}</td>
                             <td className="py-1 text-center">{item.quantity}</td>

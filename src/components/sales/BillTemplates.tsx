@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { Company, Sale, SaleItem } from '../../types';
-import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 
 // Define styles
 const styles = StyleSheet.create({
@@ -120,7 +121,7 @@ export const CompanyBillTemplate: React.FC<CompanyBillTemplateProps> = ({ compan
 
   return (
     <Document>
-      <Page size="BILL" style={styles.page}>
+      <Page size="A4" style={styles.page}>
         <View style={styles.header}>
           <Text style={styles.companyName}>{company.name}</Text>
           <Text>{company.address}</Text>
@@ -333,3 +334,4 @@ export const ConsolidatedBillTemplate: React.FC<{ sale: Sale | Sale[] }> = ({ sa
     </Document>
   );
 };
+
