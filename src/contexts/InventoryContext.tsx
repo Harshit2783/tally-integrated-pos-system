@@ -19,6 +19,7 @@ interface InventoryContextType {
   updateStock: (itemId: string, quantity: number, salesUnit?: string) => void;
   getItemsByCompany: (companyId: string) => Item[];
   getGodownsByCompany: (companyId: string) => Godown[];
+  getAllItems: () => Item[];
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
@@ -37,8 +38,9 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
       setFilteredItems(items.filter(item => item.companyId === currentCompany.id));
       setFilteredGodowns(godowns.filter(godown => godown.companyId === currentCompany.id));
     } else {
-      setFilteredItems([]);
-      setFilteredGodowns([]);
+      // If no company is selected, show all items
+      setFilteredItems(items);
+      setFilteredGodowns(godowns);
     }
   }, [currentCompany, items, godowns]);
 
@@ -49,8 +51,33 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
   const getGodownsByCompany = (companyId: string): Godown[] => {
     return godowns.filter(godown => godown.companyId === companyId);
   };
+  
+  const getAllItems = (): Item[] => {
+    return items;
+  };
 
   const addItem = (itemData: Omit<Item, 'id' | 'createdAt'>) => {
+    // Validate item data
+    if (!itemData.companyId) {
+      toast.error('Company is required for all items');
+      return;
+    }
+    
+    // Validate that GST items have HSN code
+    if (itemData.type === 'GST' && !itemData.hsnCode) {
+      toast.error('HSN Code is required for GST items');
+      return;
+    }
+    
+    // Validate that MRP = Excl. Cost + GST for GST items
+    if (itemData.type === 'GST' && itemData.gstPercentage && itemData.mrp) {
+      const calculatedMRP = itemData.unitPrice * (1 + itemData.gstPercentage / 100);
+      if (Math.abs(calculatedMRP - itemData.mrp) > 0.01) { // Allow small rounding difference
+        toast.error(`MRP should be equal to Excl. Cost + GST (${calculatedMRP.toFixed(2)})`);
+        return;
+      }
+    }
+    
     const newItem: Item = {
       ...itemData,
       id: generateId(),
@@ -62,6 +89,27 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
   };
 
   const updateItem = (updatedItem: Item) => {
+    // Validate item data
+    if (!updatedItem.companyId) {
+      toast.error('Company is required for all items');
+      return;
+    }
+    
+    // Validate that GST items have HSN code
+    if (updatedItem.type === 'GST' && !updatedItem.hsnCode) {
+      toast.error('HSN Code is required for GST items');
+      return;
+    }
+    
+    // Validate that MRP = Excl. Cost + GST for GST items
+    if (updatedItem.type === 'GST' && updatedItem.gstPercentage && updatedItem.mrp) {
+      const calculatedMRP = updatedItem.unitPrice * (1 + updatedItem.gstPercentage / 100);
+      if (Math.abs(calculatedMRP - updatedItem.mrp) > 0.01) { // Allow small rounding difference
+        toast.error(`MRP should be equal to Excl. Cost + GST (${calculatedMRP.toFixed(2)})`);
+        return;
+      }
+    }
+    
     setItems((prev) =>
       prev.map((item) => (item.id === updatedItem.id ? updatedItem : item))
     );
@@ -175,6 +223,7 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
         updateStock,
         getItemsByCompany,
         getGodownsByCompany,
+        getAllItems,
       }}
     >
       {children}

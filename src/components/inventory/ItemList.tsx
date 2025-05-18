@@ -15,42 +15,61 @@ import { Button } from '@/components/ui/button';
 import { Edit2, Trash2, RotateCcw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import ReturnItemForm from './ReturnItemForm';
+import { useCompany } from '../../contexts/CompanyContext';
 
 interface ItemListProps {
   onEdit: (item: Item) => void;
   onDelete: (id: string) => void;
-  companyId: string;
+  companyId?: string;
 }
 
 const ItemList: React.FC<ItemListProps> = ({ onEdit, onDelete, companyId }) => {
-  const { getItemsByCompany, godowns } = useInventory();
-  const [items, setItems] = useState<Item[]>([]);
+  const { items, godowns, getAllItems } = useInventory();
+  const { companies } = useCompany();
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredItems, setFilteredItems] = useState<Item[]>([]);
   const [returningItem, setReturningItem] = useState<string | null>(null);
 
   // Update items when companyId changes
   useEffect(() => {
+    let displayItems: Item[];
+    
     if (companyId) {
-      const companyItems = getItemsByCompany(companyId);
-      setItems(companyItems);
+      displayItems = items.filter(item => item.companyId === companyId);
     } else {
-      setItems([]);
+      displayItems = getAllItems();
     }
-  }, [companyId, getItemsByCompany]);
+    
+    setFilteredItems(displayItems);
+  }, [companyId, items, getAllItems]);
 
   // Filter items when search term or items change
   useEffect(() => {
-    const filtered = items.filter((item) =>
+    let displayItems: Item[];
+    
+    if (companyId) {
+      displayItems = items.filter(item => item.companyId === companyId);
+    } else {
+      displayItems = getAllItems();
+    }
+    
+    const filtered = displayItems.filter((item) =>
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.itemId.toLowerCase().includes(searchTerm.toLowerCase())
+      item.itemId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      getCompanyName(item.companyId).toLowerCase().includes(searchTerm.toLowerCase())
     );
+    
     setFilteredItems(filtered);
-  }, [searchTerm, items]);
+  }, [searchTerm, items, companyId, companies, getAllItems]);
 
   const getGodownName = (godownId: string) => {
     const godown = godowns.find(g => g.id === godownId);
     return godown ? godown.name : 'Unknown';
+  };
+  
+  const getCompanyName = (companyId: string) => {
+    const company = companies.find(c => c.id === companyId);
+    return company ? company.name : 'Unknown';
   };
 
   const handleReturnItem = (itemId: string) => {
@@ -82,9 +101,12 @@ const ItemList: React.FC<ItemListProps> = ({ onEdit, onDelete, companyId }) => {
               <TableRow>
                 <TableHead>Item ID</TableHead>
                 <TableHead>Name</TableHead>
+                <TableHead>Company</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Unit Price</TableHead>
+                <TableHead>MRP</TableHead>
                 <TableHead>GST %</TableHead>
+                <TableHead>HSN Code</TableHead>
                 <TableHead>Sales Unit</TableHead>
                 <TableHead>Godown</TableHead>
                 <TableHead>Stock</TableHead>
@@ -97,9 +119,12 @@ const ItemList: React.FC<ItemListProps> = ({ onEdit, onDelete, companyId }) => {
                   <TableRow key={item.id}>
                     <TableCell>{item.itemId}</TableCell>
                     <TableCell>{item.name}</TableCell>
+                    <TableCell>{getCompanyName(item.companyId)}</TableCell>
                     <TableCell>{item.type}</TableCell>
                     <TableCell>₹{item.unitPrice.toFixed(2)}</TableCell>
+                    <TableCell>{item.mrp ? `₹${item.mrp.toFixed(2)}` : 'N/A'}</TableCell>
                     <TableCell>{item.type === 'GST' ? `${item.gstPercentage}%` : 'N/A'}</TableCell>
+                    <TableCell>{item.hsnCode || 'N/A'}</TableCell>
                     <TableCell>{item.salesUnit}</TableCell>
                     <TableCell>{getGodownName(item.godownId)}</TableCell>
                     <TableCell>{item.stockQuantity}</TableCell>
@@ -134,7 +159,7 @@ const ItemList: React.FC<ItemListProps> = ({ onEdit, onDelete, companyId }) => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8">
+                  <TableCell colSpan={12} className="text-center py-8">
                     No items found
                   </TableCell>
                 </TableRow>

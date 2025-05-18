@@ -19,6 +19,7 @@ interface SalesContextType {
   createSale: (saleData: Omit<Sale, 'id' | 'createdAt'>) => Sale | undefined;
   getSale: (id: string) => Sale | undefined;
   validateCompanyItems: (items: SaleItem[]) => { valid: boolean; errorMessage?: string };
+  getAllSales: () => Sale[];
 }
 
 const SalesContext = createContext<SalesContextType | undefined>(undefined);
@@ -41,9 +42,10 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       setGstSales(companySales.filter(sale => sale.billType === 'GST'));
       setNonGstSales(companySales.filter(sale => sale.billType === 'NON-GST'));
     } else {
-      setFilteredSales([]);
-      setGstSales([]);
-      setNonGstSales([]);
+      // If no company is selected, show all sales
+      setFilteredSales(sales);
+      setGstSales(sales.filter(sale => sale.billType === 'GST'));
+      setNonGstSales(sales.filter(sale => sale.billType === 'NON-GST'));
     }
   }, [currentCompany, sales]);
 
@@ -108,6 +110,21 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     if (saleItem.companyName === 'Estimate' && saleItem.gstPercentage) {
       toast.error('Estimate company only accepts Non-GST items');
       return;
+    }
+    
+    // HSN code validation for GST items of Mansan Laal
+    if (saleItem.companyName === 'Mansan Laal and Sons' && !saleItem.hsnCode) {
+      toast.error('HSN Code is required for Mansan Laal and Sons items');
+      return;
+    }
+    
+    // Validate MRP = Excl. Cost + GST for GST items
+    if (saleItem.gstPercentage && saleItem.mrp) {
+      const calculatedMRP = saleItem.unitPrice * (1 + saleItem.gstPercentage / 100);
+      if (Math.abs(calculatedMRP - saleItem.mrp) > 0.01) { // Allow small rounding difference
+        toast.error(`MRP should be equal to Excl. Cost + GST (${calculatedMRP.toFixed(2)})`);
+        return;
+      }
     }
     
     const updatedItems = [...currentSaleItems];
@@ -185,6 +202,19 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           errorMessage: `${company.name} cannot have mixed GST/Non-GST items`
         };
       }
+      
+      // Validate MRP = Excl. Cost + GST for all GST items
+      for (const item of companyItems) {
+        if (item.gstPercentage && item.mrp) {
+          const calculatedMRP = item.unitPrice * (1 + item.gstPercentage / 100);
+          if (Math.abs(calculatedMRP - item.mrp) > 0.01) { // Allow small rounding difference
+            return {
+              valid: false,
+              errorMessage: `Item ${item.name}: MRP should be equal to Excl. Cost + GST (${calculatedMRP.toFixed(2)})`
+            };
+          }
+        }
+      }
     }
     
     return { valid: true };
@@ -235,6 +265,10 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const getSale = (id: string) => {
     return sales.find(sale => sale.id === id);
   };
+  
+  const getAllSales = () => {
+    return sales;
+  };
 
   return (
     <SalesContext.Provider
@@ -251,6 +285,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         createSale,
         getSale,
         validateCompanyItems,
+        getAllSales,
       }}
     >
       {children}

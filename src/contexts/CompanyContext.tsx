@@ -42,7 +42,7 @@ export const CompanyProvider: React.FC<{ children: ReactNode }> = ({ children })
     // Check if we already have companies from mockData or previous sessions
     if (mockCompanies.length > 0) {
       setCompanies(mockCompanies);
-      setCurrentCompany(mockCompanies[0]);
+      setCurrentCompany(null); // Set to null initially to show all companies in dashboard
     } else {
       // If no companies exist, add our default companies
       const initializedCompanies: Company[] = DEFAULT_COMPANIES.map(company => ({
@@ -53,10 +53,8 @@ export const CompanyProvider: React.FC<{ children: ReactNode }> = ({ children })
       
       setCompanies(initializedCompanies);
       
-      // Set Mansan Laal as the default current company
-      if (initializedCompanies.length > 0) {
-        setCurrentCompany(initializedCompanies[0]);
-      }
+      // Set to null initially to show all companies in dashboard
+      setCurrentCompany(null);
     }
   }, []);
 
@@ -69,11 +67,6 @@ export const CompanyProvider: React.FC<{ children: ReactNode }> = ({ children })
     
     setCompanies((prev) => [...prev, newCompany]);
     toast.success('Company added successfully');
-    
-    // Set as current company if it's the first one
-    if (companies.length === 0) {
-      setCurrentCompany(newCompany);
-    }
   };
 
   const updateCompany = (updatedCompany: Company) => {
@@ -96,8 +89,7 @@ export const CompanyProvider: React.FC<{ children: ReactNode }> = ({ children })
     
     // Reset current company if it's the one being deleted
     if (currentCompany && currentCompany.id === id) {
-      const remainingCompanies = companies.filter((company) => company.id !== id);
-      setCurrentCompany(remainingCompanies.length > 0 ? remainingCompanies[0] : null);
+      setCurrentCompany(null);
     }
     
     toast.success('Company deleted successfully');

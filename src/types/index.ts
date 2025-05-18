@@ -33,7 +33,7 @@ export interface Item {
   unitPrice: number;
   mrp?: number;
   gstPercentage?: number;
-  hsnCode?: string;  // Added HSN Code
+  hsnCode?: string;  
   godownId: string;
   stockQuantity: number;
   salesUnit: 'Case' | 'Packet' | 'Piece';
@@ -52,7 +52,7 @@ export interface SaleItem {
   discountPercentage?: number; // Discount percentage
   gstPercentage?: number;
   gstAmount?: number;
-  hsnCode?: string;  // Added HSN Code
+  hsnCode?: string;
   packagingDetails?: string; // Added packaging details for Estimate company
   totalPrice: number; // Final price after GST and discount
   totalAmount: number;
@@ -96,4 +96,27 @@ export interface CompanyContextType {
   addCompany: (companyData: Omit<Company, 'id' | 'createdAt'>) => void;
   updateCompany: (company: Company) => void;
   deleteCompany: (id: string) => void;
+}
+
+// Dashboard Analytics Types
+export interface DashboardAnalytics {
+  totalSales: number;
+  totalBills: number;
+  companyRevenue: {
+    companyId: string;
+    companyName: string;
+    revenue: number;
+    billCount: number;
+  }[];
+  gstSales: number;
+  nonGstSales: number;
+  totalDiscounts: number;
+  topItems: {
+    companyId: string;
+    companyName: string;
+    itemId: string;
+    itemName: string;
+    quantity: number;
+    revenue: number;
+  }[];
 }

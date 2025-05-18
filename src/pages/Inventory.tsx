@@ -1,10 +1,4 @@
 
-/**
- * Inventory Page
- * Manages product inventory with functionality to add, edit, and delete
- * items with their quantities, prices, and other relevant attributes.
- */
-
 import React, { useState } from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -16,7 +10,6 @@ import { Item } from '../types';
 import { useInventory } from '../contexts/InventoryContext';
 import { PlusCircle } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { useCompany } from '../contexts/CompanyContext';
 
@@ -28,9 +21,6 @@ const Inventory = () => {
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>(currentCompany?.id || '');
 
   const handleAddItem = () => {
-    if (!selectedCompanyId) {
-      return;
-    }
     setIsAddingItem(true);
     setEditingItem(null);
   };
@@ -66,9 +56,14 @@ const Inventory = () => {
 
   const handleCompanyChange = (companyId: string) => {
     setSelectedCompanyId(companyId);
-    const company = companies.find(c => c.id === companyId);
-    if (company) {
-      setCurrentCompany(company);
+    
+    if (companyId === 'all') {
+      setCurrentCompany(null);
+    } else {
+      const company = companies.find(c => c.id === companyId);
+      if (company) {
+        setCurrentCompany(company);
+      }
     }
   };
 
@@ -81,13 +76,14 @@ const Inventory = () => {
           <div className="flex flex-col md:flex-row gap-4">
             <div className="w-full md:w-64">
               <Select 
-                value={selectedCompanyId} 
+                value={selectedCompanyId || 'all'} 
                 onValueChange={handleCompanyChange}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a company" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">All Companies</SelectItem>
                   {companies.map((company) => (
                     <SelectItem key={company.id} value={company.id}>
                       {company.name}
@@ -99,7 +95,7 @@ const Inventory = () => {
             
             <Button 
               onClick={handleAddItem} 
-              disabled={isAddingItem || !!editingItem || !selectedCompanyId}
+              disabled={isAddingItem || !!editingItem}
             >
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Item
@@ -107,17 +103,11 @@ const Inventory = () => {
           </div>
         </div>
 
-        {!selectedCompanyId && (
-          <Card className="p-6 bg-amber-50 border-amber-200">
-            <p className="text-amber-800">Please select a company to manage inventory items.</p>
-          </Card>
-        )}
-
-        {isAddingItem && selectedCompanyId && (
+        {isAddingItem && (
           <ItemForm 
             onSubmit={handleSubmit} 
-            onCancel={handleCancel} 
-            companyId={selectedCompanyId}
+            onCancel={handleCancel}
+            companyId={selectedCompanyId !== 'all' ? selectedCompanyId : undefined}
           />
         )}
 
@@ -126,17 +116,14 @@ const Inventory = () => {
             item={editingItem} 
             onSubmit={handleSubmit} 
             onCancel={handleCancel}
-            companyId={editingItem.companyId}
           />
         )}
 
-        {selectedCompanyId && (
-          <ItemList 
-            onEdit={handleEditItem} 
-            onDelete={handleDeleteItem} 
-            companyId={selectedCompanyId}
-          />
-        )}
+        <ItemList 
+          onEdit={handleEditItem} 
+          onDelete={handleDeleteItem} 
+          companyId={selectedCompanyId !== 'all' ? selectedCompanyId : undefined}
+        />
       </div>
     </MainLayout>
   );
