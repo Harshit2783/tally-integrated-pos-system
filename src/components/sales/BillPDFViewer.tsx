@@ -1,9 +1,10 @@
 
-import React from 'react';
+import React, { ReactElement } from 'react';
 import { PDFViewer } from '@react-pdf/renderer';
+import { DocumentProps } from '@react-pdf/renderer';
 
 interface BillPDFViewerProps {
-  children: React.ReactNode;
+  children: ReactElement<DocumentProps>;
 }
 
 const BillPDFViewer: React.FC<BillPDFViewerProps> = ({ children }) => {
