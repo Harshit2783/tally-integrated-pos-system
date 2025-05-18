@@ -433,6 +433,7 @@ const EnhancedSaleForm: React.FC = () => {
   // Company-wise summary calculation
   const companySummaries = useMemo(() => {
     const summaries: Record<string, { 
+      id: string;    // Adding the id property
       name: string; 
       subtotal: number; 
       discount: number; 
@@ -443,6 +444,7 @@ const EnhancedSaleForm: React.FC = () => {
     currentSaleItems.forEach(item => {
       if (!summaries[item.companyId]) {
         summaries[item.companyId] = {
+          id: item.companyId,  // Store the company ID
           name: item.companyName,
           subtotal: 0,
           discount: 0,
