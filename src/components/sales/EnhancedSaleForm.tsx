@@ -401,7 +401,7 @@ const EnhancedSaleForm: React.FC = () => {
       const companyTotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
 
       // Create the sale
-      const sale = createSale({
+      const newSale = createSale({
         companyId: company.id,
         billNumber: `${billType}-${Date.now()}`,
         date: new Date().toISOString(),
@@ -414,9 +414,10 @@ const EnhancedSaleForm: React.FC = () => {
         totalGst: companyGst,
         items,
       });
-
-      if (sale) {
-        createdSales.push(sale);
+      
+      // Only push to createdSales if newSale is defined
+      if (newSale) {
+        createdSales.push(newSale);
       }
     });
     
