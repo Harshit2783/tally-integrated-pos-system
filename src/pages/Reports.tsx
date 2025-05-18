@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import { CompanyProvider } from '../contexts/CompanyContext';
@@ -166,7 +165,10 @@ const Reports = () => {
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip formatter={(value) => `₹${value.toFixed(2)}`} />
+                        <Tooltip formatter={(value) => {
+                          // Ensure value is a number before calling toFixed
+                          return `₹${typeof value === 'number' ? value.toFixed(2) : value}`;
+                        }} />
                         <Legend />
                       </PieChart>
                     </ResponsiveContainer>
@@ -233,7 +235,10 @@ const Reports = () => {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" />
                       <YAxis />
-                      <Tooltip formatter={(value) => `₹${value.toFixed(2)}`} />
+                      <Tooltip formatter={(value) => {
+                        // Ensure value is a number before calling toFixed
+                        return `₹${typeof value === 'number' ? value.toFixed(2) : value}`;
+                      }} />
                       <Legend />
                       <Bar dataKey="revenue" name="Revenue" fill="#8884d8" />
                     </BarChart>
