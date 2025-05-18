@@ -18,6 +18,7 @@ interface SalesContextType {
   clearSaleItems: () => void;
   createSale: (saleData: Omit<Sale, 'id' | 'createdAt'>) => Sale | undefined;
   getSale: (id: string) => Sale | undefined;
+  validateCompanyItems: (items: SaleItem[]) => { valid: boolean; errorMessage?: string };
 }
 
 const SalesContext = createContext<SalesContextType | undefined>(undefined);
@@ -29,8 +30,8 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [nonGstSales, setNonGstSales] = useState<Sale[]>([]);
   const [currentSaleItems, setCurrentSaleItems] = useState<SaleItem[]>([]);
   
-  const { currentCompany } = useCompany();
-  const { updateStock } = useInventory();
+  const { currentCompany, companies } = useCompany();
+  const { updateStock, items } = useInventory();
 
   // Filter sales based on current company
   useEffect(() => {
@@ -47,6 +48,23 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   }, [currentCompany, sales]);
 
   const addSaleItem = (saleItem: SaleItem) => {
+    // Validate company-specific rules
+    if (saleItem.companyName === 'Mansan Laal and Sons' && !saleItem.gstPercentage) {
+      toast.error('Mansan Laal and Sons requires GST items only');
+      return;
+    }
+    
+    if (saleItem.companyName === 'Estimate' && saleItem.gstPercentage) {
+      toast.error('Estimate company only accepts Non-GST items');
+      return;
+    }
+    
+    // HSN code validation for GST items of Mansan Laal
+    if (saleItem.companyName === 'Mansan Laal and Sons' && !saleItem.hsnCode) {
+      toast.error('HSN Code is required for Mansan Laal and Sons items');
+      return;
+    }
+    
     // Check if item already exists in current sale items with the same company
     const existingItemIndex = currentSaleItems.findIndex(
       item => item.itemId === saleItem.itemId && item.companyId === saleItem.companyId
@@ -81,6 +99,17 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   const updateSaleItem = (index: number, saleItem: SaleItem) => {
+    // Validate company-specific rules
+    if (saleItem.companyName === 'Mansan Laal and Sons' && !saleItem.gstPercentage) {
+      toast.error('Mansan Laal and Sons requires GST items only');
+      return;
+    }
+    
+    if (saleItem.companyName === 'Estimate' && saleItem.gstPercentage) {
+      toast.error('Estimate company only accepts Non-GST items');
+      return;
+    }
+    
     const updatedItems = [...currentSaleItems];
     updatedItems[index] = saleItem;
     setCurrentSaleItems(updatedItems);
@@ -96,9 +125,81 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setCurrentSaleItems([]);
   };
 
+  const validateCompanyItems = (items: SaleItem[]): { valid: boolean; errorMessage?: string } => {
+    // Group items by company
+    const itemsByCompany: Record<string, SaleItem[]> = {};
+    
+    items.forEach(item => {
+      if (!itemsByCompany[item.companyId]) {
+        itemsByCompany[item.companyId] = [];
+      }
+      itemsByCompany[item.companyId].push(item);
+    });
+    
+    // Check each company's items
+    for (const [companyId, companyItems] of Object.entries(itemsByCompany)) {
+      const company = companies.find(c => c.id === companyId);
+      if (!company) continue;
+      
+      // Special validation for Mansan Laal
+      if (company.name === 'Mansan Laal and Sons') {
+        // All items must be GST items
+        const nonGstItems = companyItems.filter(item => !item.gstPercentage);
+        if (nonGstItems.length > 0) {
+          return {
+            valid: false,
+            errorMessage: 'Mansan Laal and Sons requires GST items only'
+          };
+        }
+        
+        // All items must have HSN code
+        const missingHsnItems = companyItems.filter(item => !item.hsnCode);
+        if (missingHsnItems.length > 0) {
+          return {
+            valid: false,
+            errorMessage: 'HSN Code is required for all Mansan Laal and Sons items'
+          };
+        }
+      }
+      
+      // Special validation for Estimate
+      if (company.name === 'Estimate') {
+        // All items must be Non-GST items
+        const gstItems = companyItems.filter(item => item.gstPercentage && item.gstPercentage > 0);
+        if (gstItems.length > 0) {
+          return {
+            valid: false,
+            errorMessage: 'Estimate company only accepts Non-GST items'
+          };
+        }
+      }
+      
+      // General validation - no mixing of GST and Non-GST items
+      const hasGst = companyItems.some(item => item.gstPercentage && item.gstPercentage > 0);
+      const allHaveGst = companyItems.every(item => item.gstPercentage && item.gstPercentage > 0);
+      const noneHaveGst = companyItems.every(item => !item.gstPercentage || item.gstPercentage === 0);
+      
+      if (hasGst && !allHaveGst && !noneHaveGst) {
+        return {
+          valid: false,
+          errorMessage: `${company.name} cannot have mixed GST/Non-GST items`
+        };
+      }
+    }
+    
+    return { valid: true };
+  };
+
   const createSale = (saleData: Omit<Sale, 'id' | 'createdAt'>) => {
     if (!saleData.items || saleData.items.length === 0) {
       toast.error('No items in sale');
+      return undefined;
+    }
+    
+    // Validate company-specific rules
+    const validation = validateCompanyItems(saleData.items);
+    if (!validation.valid) {
+      toast.error(validation.errorMessage || 'Invalid items');
       return undefined;
     }
     
@@ -149,6 +250,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         clearSaleItems,
         createSale,
         getSale,
+        validateCompanyItems,
       }}
     >
       {children}

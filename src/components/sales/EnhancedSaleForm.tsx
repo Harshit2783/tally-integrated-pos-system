@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useInventory } from '../../contexts/InventoryContext';
@@ -8,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ShoppingCart, Plus, Trash2, Printer, FileText } from 'lucide-react';
+import { ShoppingCart, Plus, Trash2, Printer, FileText, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { calculateExclusiveCost, calculateMRP, calculateFinalPrice } from '../../utils/pricingUtils';
@@ -22,10 +23,18 @@ const SALES_UNITS = ['Case', 'Packet', 'Piece'];
 // Define GST rates
 const GST_RATES = [5, 12, 18, 28];
 
+// HSN Codes (sample)
+const HSN_CODES = [
+  '0910', '1101', '1902', '2106', '3004',
+  '3306', '3401', '3402', '3923', '4818',
+  '6911', '7321', '8414', '8418', '8450',
+  '8516', '8517', '8528', '9503'
+];
+
 const EnhancedSaleForm: React.FC = () => {
   const { companies, currentCompany } = useCompany();
   const { items, filteredItems, filteredGodowns } = useInventory();
-  const { addSaleItem, currentSaleItems, removeSaleItem, createSale, clearSaleItems } = useSales();
+  const { addSaleItem, currentSaleItems, removeSaleItem, createSale, clearSaleItems, validateCompanyItems } = useSales();
 
   // Form state
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>(currentCompany?.id || '');
@@ -42,6 +51,8 @@ const EnhancedSaleForm: React.FC = () => {
   const [discount, setDiscount] = useState<number>(0);
   const [discountType, setDiscountType] = useState<'amount' | 'percentage'>('amount');
   const [companyFilteredItems, setCompanyFilteredItems] = useState<Item[]>([]);
+  const [hsnCode, setHsnCode] = useState<string>('');
+  const [packagingDetails, setPackagingDetails] = useState<string>('');
 
   // Discount dialog state
   const [isDiscountDialogOpen, setIsDiscountDialogOpen] = useState<boolean>(false);
@@ -69,6 +80,31 @@ const EnhancedSaleForm: React.FC = () => {
     }
   }, [filteredGodowns, selectedGodownId]);
 
+  // Check if selected company is one of our special companies
+  const isMansan = useMemo(() => {
+    const company = companies.find(c => c.id === selectedCompanyId);
+    return company && company.name === 'Mansan Laal and Sons';
+  }, [selectedCompanyId, companies]);
+
+  const isEstimate = useMemo(() => {
+    const company = companies.find(c => c.id === selectedCompanyId);
+    return company && company.name === 'Estimate';
+  }, [selectedCompanyId, companies]);
+
+  // Set default values based on company
+  useEffect(() => {
+    if (isMansan) {
+      // Set default GST rate for Mansan
+      if (gstRate === 0) {
+        setGstRate(18); // Default to 18% GST
+      }
+    }
+    if (isEstimate) {
+      // Make sure GST rate is 0 for Estimate
+      setGstRate(0);
+    }
+  }, [isMansan, isEstimate]);
+
   // Filter items by selected company
   useEffect(() => {
     if (selectedCompanyId) {
@@ -83,8 +119,10 @@ const EnhancedSaleForm: React.FC = () => {
     setSelectedItem(null);
     setMrp(0);
     setExclusiveCost(0);
-    setGstRate(0);
-  }, [selectedCompanyId, items]);
+    setGstRate(isMansan ? 18 : 0);
+    setHsnCode('');
+    setPackagingDetails('');
+  }, [selectedCompanyId, items, isMansan]);
 
   // Update item details when item selection changes
   useEffect(() => {
@@ -94,12 +132,24 @@ const EnhancedSaleForm: React.FC = () => {
       if (item) {
         setSelectedItem(item);
         
-        // Set GST rate
-        const itemGstRate = item.type === 'GST' ? (item.gstPercentage || 0) : 0;
+        // Set GST rate based on company and item
+        let itemGstRate = 0;
+        if (isMansan) {
+          // Mansan always has GST
+          itemGstRate = item.gstPercentage || 18;
+        } else if (!isEstimate) {
+          // For other companies, use the item's GST if available
+          itemGstRate = item.type === 'GST' ? (item.gstPercentage || 0) : 0;
+        }
+        // Estimate always has 0 GST
+        
         setGstRate(itemGstRate);
         
-        // For GST items, calculate exclusive cost and MRP
-        if (item.type === 'GST' && itemGstRate > 0) {
+        // Set HSN code if available
+        setHsnCode(item.hsnCode || '');
+        
+        // Calculate prices based on GST rate
+        if (itemGstRate > 0) {
           if (item.mrp) {
             // If MRP is provided, calculate exclusive cost
             setMrp(item.mrp);
@@ -129,11 +179,12 @@ const EnhancedSaleForm: React.FC = () => {
         setSelectedItem(null);
         setMrp(0);
         setExclusiveCost(0);
-        setGstRate(0);
+        setGstRate(isMansan ? 18 : 0);
         setGstAmount(0);
+        setHsnCode('');
       }
     }
-  }, [selectedItemId, companyFilteredItems, quantity]);
+  }, [selectedItemId, companyFilteredItems, quantity, isMansan, isEstimate]);
 
   // Recalculate summary values when items change
   useEffect(() => {
@@ -215,6 +266,12 @@ const EnhancedSaleForm: React.FC = () => {
       toast.error(`Only ${selectedItem.stockQuantity} units available in stock`);
       return;
     }
+    
+    // Validate HSN code for Mansan Laal
+    if (isMansan && !hsnCode.trim()) {
+      toast.error('HSN Code is required for Mansan Laal and Sons items');
+      return;
+    }
 
     // Calculate final price after discount and GST
     const finalPriceCalculation = calculateFinalPrice(
@@ -245,6 +302,8 @@ const EnhancedSaleForm: React.FC = () => {
       totalPrice: finalPriceCalculation.finalPrice, // final price after GST and discount
       totalAmount: finalPriceCalculation.finalPrice,
       salesUnit,
+      hsnCode: hsnCode.trim() || undefined, // Add HSN code if provided
+      packagingDetails: packagingDetails.trim() || undefined, // Add packaging details if provided
     };
 
     addSaleItem(saleItem);
@@ -255,9 +314,11 @@ const EnhancedSaleForm: React.FC = () => {
     setQuantity(1);
     setMrp(0);
     setExclusiveCost(0);
-    setGstRate(0);
+    setGstRate(isMansan ? 18 : 0);
     setGstAmount(0);
     setDiscount(0);
+    setHsnCode('');
+    setPackagingDetails('');
   };
 
   const openDiscountDialog = (index: number) => {
@@ -342,7 +403,14 @@ const EnhancedSaleForm: React.FC = () => {
       return;
     }
 
-    // Group items by company for validation and creating bills
+    // Validate company-specific rules
+    const validation = validateCompanyItems(currentSaleItems);
+    if (!validation.valid) {
+      toast.error(validation.errorMessage || 'Invalid items');
+      return;
+    }
+
+    // Group items by company for creating bills
     const itemsByCompany: Record<string, SaleItem[]> = {};
     currentSaleItems.forEach(item => {
       if (!itemsByCompany[item.companyId]) {
@@ -351,34 +419,13 @@ const EnhancedSaleForm: React.FC = () => {
       itemsByCompany[item.companyId].push(item);
     });
 
-    // Validate: each company's items are all GST or all non-GST
-    const invalidCompanies: string[] = [];
-    Object.entries(itemsByCompany).forEach(([companyId, items]) => {
-      // Check if all items have the same GST status (either all have GST or none have GST)
-      const hasGst = items.some(item => item.gstPercentage && item.gstPercentage > 0);
-      const allHaveGst = items.every(item => item.gstPercentage && item.gstPercentage > 0);
-      const noneHaveGst = items.every(item => !item.gstPercentage || item.gstPercentage === 0);
-      
-      if (hasGst && !allHaveGst && !noneHaveGst) {
-        const company = companies.find(c => c.id === companyId);
-        if (company) {
-          invalidCompanies.push(company.name);
-        }
-      }
-    });
-
-    if (invalidCompanies.length > 0) {
-      toast.error(`${invalidCompanies.join(', ')} cannot have mixed GST/Non-GST items.`);
-      return;
-    }
-
     // Create bills for each company
     const createdSales: any[] = [];
     Object.entries(itemsByCompany).forEach(([companyId, items]) => {
       const company = companies.find(c => c.id === companyId);
       if (!company) return;
 
-      // Determine bill type based on items
+      // Determine bill type based on company and items
       const hasGst = items.some(item => item.gstPercentage && item.gstPercentage > 0);
       const billType = hasGst ? 'GST' : 'NON-GST';
 
@@ -391,7 +438,7 @@ const EnhancedSaleForm: React.FC = () => {
       // Create the sale
       const newSale = createSale({
         companyId: company.id,
-        billNumber: `${billType}-${Date.now()}`,
+        billNumber: `${company.name === 'Estimate' ? 'EST' : (billType === 'GST' ? 'GST' : 'NON')}-${Date.now()}`,
         date: new Date().toISOString(),
         customerName,
         billType,
@@ -424,6 +471,13 @@ const EnhancedSaleForm: React.FC = () => {
   const handlePreviewConsolidatedBill = () => {
     if (currentSaleItems.length === 0) {
       toast.error('No items added to the sale');
+      return;
+    }
+    
+    // Validate company-specific rules
+    const validation = validateCompanyItems(currentSaleItems);
+    if (!validation.valid) {
+      toast.error(validation.errorMessage || 'Invalid items');
       return;
     }
     
@@ -570,7 +624,8 @@ const EnhancedSaleForm: React.FC = () => {
             </Select>
           </div>
         </div>
-        
+
+        {/* GST, HSN, and pricing */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
           <div>
             <Label htmlFor="mrp">MRP</Label>
@@ -601,13 +656,13 @@ const EnhancedSaleForm: React.FC = () => {
             <Select 
               value={gstRate.toString()} 
               onValueChange={(value) => setGstRate(parseInt(value))}
-              disabled={selectedItem?.type !== 'GST'}
+              disabled={isEstimate} // Disable for Estimate company
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select GST Rate" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="0">0%</SelectItem>
+                {!isMansan && <SelectItem value="0">0%</SelectItem>}
                 {GST_RATES.map((rate) => (
                   <SelectItem key={rate} value={rate.toString()}>
                     {rate}%
@@ -640,6 +695,46 @@ const EnhancedSaleForm: React.FC = () => {
           </div>
         </div>
         
+        {/* HSN Code and Packaging Details */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          {isMansan && (
+            <div>
+              <Label htmlFor="hsnCode">HSN Code *</Label>
+              <Select 
+                value={hsnCode} 
+                onValueChange={setHsnCode}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select HSN Code" />
+                </SelectTrigger>
+                <SelectContent>
+                  {HSN_CODES.map((code) => (
+                    <SelectItem key={code} value={code}>
+                      {code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-gray-500 mt-1">Required for Mansan Laal and Sons</p>
+            </div>
+          )}
+          
+          {isEstimate && (
+            <div>
+              <Label htmlFor="packagingDetails">Packaging Details</Label>
+              <Input
+                id="packagingDetails"
+                value={packagingDetails}
+                onChange={(e) => setPackagingDetails(e.target.value)}
+                placeholder="Optional details about packaging"
+                maxLength={50} // Limit length to avoid overflow on thermal slip
+              />
+              <p className="text-xs text-gray-500 mt-1">Will appear on 2nd line in Estimate bill</p>
+            </div>
+          )}
+        </div>
+        
+        {/* Discount and Add Item button */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
           <div>
             <Label htmlFor="perUnit">Per ({salesUnit})</Label>
@@ -684,16 +779,32 @@ const EnhancedSaleForm: React.FC = () => {
               type="button" 
               onClick={handleAddItem}
               className="w-full"
-              disabled={!selectedCompanyId || !selectedItemId || quantity <= 0}
+              disabled={!selectedCompanyId || !selectedItemId || quantity <= 0 || (isMansan && !hsnCode)}
             >
               <Plus size={16} className="mr-1" /> Add Item
             </Button>
           </div>
         </div>
         
+        {/* Item stock info */}
         {selectedItem && (
           <div className="text-xs text-gray-600 mb-4">
             <p>In stock: {selectedItem.stockQuantity} units</p>
+          </div>
+        )}
+        
+        {/* Company-specific warnings */}
+        {isMansan && (
+          <div className="flex items-center p-2 mb-4 text-amber-800 bg-amber-50 rounded border border-amber-200">
+            <AlertCircle size={16} className="mr-2" />
+            <p className="text-xs">Mansan Laal and Sons requires GST items with HSN codes only.</p>
+          </div>
+        )}
+        
+        {isEstimate && (
+          <div className="flex items-center p-2 mb-4 text-blue-800 bg-blue-50 rounded border border-blue-200">
+            <AlertCircle size={16} className="mr-2" />
+            <p className="text-xs">Estimate company only accepts Non-GST items.</p>
           </div>
         )}
       </Card>
@@ -719,7 +830,15 @@ const EnhancedSaleForm: React.FC = () => {
               currentSaleItems.map((item, index) => (
                 <TableRow key={index}>
                   <TableCell>{item.companyName}</TableCell>
-                  <TableCell>{item.name}</TableCell>
+                  <TableCell>
+                    {item.name}
+                    {item.hsnCode && (
+                      <div className="text-xs text-gray-500">HSN: {item.hsnCode}</div>
+                    )}
+                    {item.packagingDetails && (
+                      <div className="text-xs text-gray-500">{item.packagingDetails}</div>
+                    )}
+                  </TableCell>
                   <TableCell className="text-center">{item.quantity} {item.salesUnit}</TableCell>
                   <TableCell className="text-right">₹{(item.mrp || item.unitPrice).toFixed(2)}</TableCell>
                   <TableCell className="text-right">
@@ -972,7 +1091,12 @@ const EnhancedSaleForm: React.FC = () => {
                       <tbody>
                         {currentSaleItems.filter(item => item.companyId === company.id).map((item, idx) => (
                           <tr key={idx} className="border-b border-gray-200">
-                            <td className="py-1">{item.name}</td>
+                            <td className="py-1">
+                              {item.name}
+                              {item.packagingDetails && (
+                                <div className="text-xs text-gray-500">{item.packagingDetails}</div>
+                              )}
+                            </td>
                             <td className="py-1 text-center">{item.quantity}</td>
                             <td className="py-1 text-right">₹{(item.mrp || item.unitPrice).toFixed(2)}</td>
                             <td className="py-1 text-right">₹{(item.discountValue || 0).toFixed(2)}</td>

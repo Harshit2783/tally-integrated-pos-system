@@ -33,6 +33,7 @@ export interface Item {
   unitPrice: number;
   mrp?: number;
   gstPercentage?: number;
+  hsnCode?: string;  // Added HSN Code
   godownId: string;
   stockQuantity: number;
   salesUnit: 'Case' | 'Packet' | 'Piece';
@@ -51,6 +52,8 @@ export interface SaleItem {
   discountPercentage?: number; // Discount percentage
   gstPercentage?: number;
   gstAmount?: number;
+  hsnCode?: string;  // Added HSN Code
+  packagingDetails?: string; // Added packaging details for Estimate company
   totalPrice: number; // Final price after GST and discount
   totalAmount: number;
   salesUnit: string;

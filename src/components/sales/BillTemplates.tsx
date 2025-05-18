@@ -10,6 +10,12 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: 'Helvetica',
   },
+  thermalPage: {
+    padding: 10,
+    fontSize: 8,
+    fontFamily: 'Helvetica',
+    width: '3in',
+  },
   section: {
     margin: 5,
   },
@@ -95,6 +101,61 @@ const styles = StyleSheet.create({
     borderBottomStyle: 'solid',
     paddingBottom: 2,
   },
+  // New styles for thermal receipt format
+  thermalCompanyName: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginBottom: 2,
+    textAlign: 'center',
+  },
+  thermalBillInfo: {
+    marginBottom: 8,
+    fontSize: 8,
+    textAlign: 'center',
+  },
+  thermalTableHeader: {
+    flexDirection: 'row',
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#000',
+    borderBottomStyle: 'solid',
+    paddingBottom: 2,
+    fontWeight: 'bold',
+    fontSize: 8,
+  },
+  thermalTableRow: {
+    flexDirection: 'row',
+    paddingVertical: 3,
+    fontSize: 8,
+  },
+  thermalDescription: { width: '40%' },
+  thermalQty: { width: '10%', textAlign: 'center' },
+  thermalRate: { width: '25%', textAlign: 'right' },
+  thermalAmount: { width: '25%', textAlign: 'right' },
+  thermalHsn: { width: '15%', textAlign: 'center' },
+  thermalGst: { width: '10%', textAlign: 'right' },
+  thermalItemDetails: {
+    fontSize: 7,
+    color: '#555',
+    paddingLeft: 3,
+    paddingTop: 1,
+  },
+  thermalTaxSummary: {
+    marginTop: 8,
+    borderTopWidth: 0.5,
+    borderTopColor: '#000',
+    paddingTop: 5,
+  },
+  thermalTaxRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 2,
+    fontSize: 8,
+  },
+  // Estimate specific styles
+  estimateDescription: { width: '45%' },
+  estimateQty: { width: '15%', textAlign: 'center' },
+  estimateRate: { width: '20%', textAlign: 'right' },
+  estimateAmount: { width: '20%', textAlign: 'right' },
 });
 
 interface CompanyBillTemplateProps {
@@ -119,94 +180,279 @@ export const CompanyBillTemplate: React.FC<CompanyBillTemplateProps> = ({ compan
   const hasGst = items.some(item => item.gstPercentage && item.gstPercentage > 0);
   const hasDiscount = items.some(item => item.discountValue && item.discountValue > 0);
 
-  return (
-    <Document>
-      <Page size="A4" style={styles.page}>
-        <View style={styles.header}>
-          <Text style={styles.companyName}>{company.name}</Text>
-          <Text>{company.address}</Text>
-          {company.gstin && <Text>GSTIN: {company.gstin}</Text>}
-        </View>
-        
-        <View style={styles.billInfo}>
-          <View style={styles.billInfoCol}>
-            <Text>Bill No: {sale.billNumber}</Text>
-            <Text>Date: {new Date(sale.date).toLocaleDateString()}</Text>
-          </View>
-          <View style={styles.billInfoCol}>
-            <Text>Customer: {sale.customerName}</Text>
-          </View>
-        </View>
-        
-        <View style={styles.tableContainer}>
-          <View style={styles.tableHeader}>
-            <Text style={styles.description}>Item</Text>
-            <Text style={styles.qty}>Qty</Text>
-            <Text style={styles.mrp}>MRP</Text>
-            {hasDiscount && <Text style={styles.discount}>Disc</Text>}
-            <Text style={styles.exclCost}>Excl</Text>
-            {hasGst && <Text style={styles.gst}>GST</Text>}
-            <Text style={styles.total}>Total</Text>
+  // Check for company type to determine template
+  const isMansan = company.name === 'Mansan Laal and Sons';
+  const isEstimate = company.name === 'Estimate';
+
+  // Group items by GST rate for tax summary (needed for Mansan Laal format)
+  const groupedByGstRate: Record<string, { rate: number, taxable: number, tax: number }> = {};
+  if (isMansan && hasGst) {
+    items.forEach(item => {
+      if (item.gstPercentage) {
+        const rate = item.gstPercentage.toString();
+        if (!groupedByGstRate[rate]) {
+          groupedByGstRate[rate] = { rate: item.gstPercentage, taxable: 0, tax: 0 };
+        }
+        groupedByGstRate[rate].taxable += item.unitPrice * item.quantity;
+        groupedByGstRate[rate].tax += item.gstAmount || 0;
+      }
+    });
+  }
+
+  // Use company specific template
+  if (isMansan) {
+    return (
+      <Document>
+        <Page size={[226, 'auto']} style={styles.thermalPage}>
+          <View style={styles.header}>
+            <Text style={styles.thermalCompanyName}>{company.name}</Text>
+            <Text style={styles.thermalBillInfo}>{company.address}</Text>
+            {company.gstin && <Text style={styles.thermalBillInfo}>GSTIN: {company.gstin}</Text>}
+            <Text style={styles.thermalBillInfo}>Bill No: {sale.billNumber} | Date: {new Date(sale.date).toLocaleDateString()}</Text>
+            <Text style={styles.thermalBillInfo}>Customer: {sale.customerName}</Text>
           </View>
           
-          {items.map((item, index) => (
-            <View key={index} style={styles.tableRow}>
-              <Text style={styles.description}>{item.name}</Text>
-              <Text style={styles.qty}>{item.quantity}</Text>
-              <Text style={styles.mrp}>₹{(item.mrp || item.unitPrice).toFixed(2)}</Text>
-              {hasDiscount && (
-                <Text style={styles.discount}>
-                  {item.discountValue ? `₹${item.discountValue.toFixed(2)}` : '-'}
-                </Text>
-              )}
-              <Text style={styles.exclCost}>₹{item.unitPrice.toFixed(2)}</Text>
-              {hasGst && (
-                <Text style={styles.gst}>
-                  {item.gstPercentage ? `${item.gstPercentage}%` : '-'}
-                </Text>
-              )}
-              <Text style={styles.total}>₹{item.totalPrice.toFixed(2)}</Text>
+          <View style={styles.tableContainer}>
+            <View style={styles.thermalTableHeader}>
+              <Text style={styles.thermalDescription}>Item</Text>
+              <Text style={styles.thermalQty}>Qty</Text>
+              <Text style={styles.thermalRate}>Nt.Rate</Text>
+              <Text style={styles.thermalAmount}>Amount</Text>
+              <Text style={styles.thermalGst}>GST%</Text>
+              <Text style={styles.thermalHsn}>HSN</Text>
             </View>
-          ))}
-        </View>
-        
-        <View style={styles.summaryContainer}>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryTitle}>Total Qty:</Text>
-            <Text style={styles.summaryValue}>{totalQuantity}</Text>
+            
+            {items.map((item, index) => (
+              <React.Fragment key={index}>
+                <View style={styles.thermalTableRow}>
+                  <Text style={styles.thermalDescription}>{item.name}</Text>
+                  <Text style={styles.thermalQty}>{item.quantity}</Text>
+                  <Text style={styles.thermalRate}>₹{item.unitPrice.toFixed(2)}</Text>
+                  <Text style={styles.thermalAmount}>₹{(item.unitPrice * item.quantity).toFixed(2)}</Text>
+                  <Text style={styles.thermalGst}>{item.gstPercentage || 0}%</Text>
+                  <Text style={styles.thermalHsn}>{item.hsnCode || 'N/A'}</Text>
+                </View>
+                <View style={styles.thermalItemDetails}>
+                  <Text>MRP: ₹{(item.mrp || item.unitPrice).toFixed(2)} | 
+                    {item.discountValue ? ` Disc: ₹${item.discountValue.toFixed(2)} | ` : ''} 
+                    Total: ₹{item.totalPrice.toFixed(2)}</Text>
+                </View>
+              </React.Fragment>
+            ))}
           </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryTitle}>Total Excl. GST:</Text>
-            <Text style={styles.summaryValue}>₹{totalExclusiveCost.toFixed(2)}</Text>
+          
+          <View style={styles.thermalTaxSummary}>
+            {hasGst && Object.values(groupedByGstRate).map((taxGroup, index) => (
+              <View key={index} style={styles.thermalTaxRow}>
+                <Text>GST {taxGroup.rate}%:</Text>
+                <Text>₹{taxGroup.taxable.toFixed(2)} @{taxGroup.rate}% = ₹{taxGroup.tax.toFixed(2)}</Text>
+              </View>
+            ))}
+            
+            {hasGst && Object.values(groupedByGstRate).map((taxGroup, index) => (
+              <View key={`split-${index}`} style={styles.thermalTaxRow}>
+                <Text>CGST {taxGroup.rate/2}% + SGST {taxGroup.rate/2}%:</Text>
+                <Text>₹{(taxGroup.tax/2).toFixed(2)} + ₹{(taxGroup.tax/2).toFixed(2)}</Text>
+              </View>
+            ))}
           </View>
-          {hasDiscount && (
+          
+          <View style={styles.summaryContainer}>
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryTitle}>Total Discount:</Text>
-              <Text style={styles.summaryValue}>₹{totalDiscount.toFixed(2)}</Text>
+              <Text style={styles.summaryTitle}>Total Qty:</Text>
+              <Text style={styles.summaryValue}>{totalQuantity}</Text>
             </View>
-          )}
-          {hasGst && (
             <View style={styles.summaryRow}>
-              <Text style={styles.summaryTitle}>Total GST:</Text>
-              <Text style={styles.summaryValue}>₹{totalGst.toFixed(2)}</Text>
+              <Text style={styles.summaryTitle}>Total Excl. GST:</Text>
+              <Text style={styles.summaryValue}>₹{totalExclusiveCost.toFixed(2)}</Text>
             </View>
-          )}
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryTitle}>Round Off:</Text>
-            <Text style={styles.summaryValue}>₹{roundOff.toFixed(2)}</Text>
+            {hasDiscount && (
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryTitle}>Total Discount:</Text>
+                <Text style={styles.summaryValue}>₹{totalDiscount.toFixed(2)}</Text>
+              </View>
+            )}
+            {hasGst && (
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryTitle}>Total GST:</Text>
+                <Text style={styles.summaryValue}>₹{totalGst.toFixed(2)}</Text>
+              </View>
+            )}
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryTitle}>Round Off:</Text>
+              <Text style={styles.summaryValue}>₹{roundOff.toFixed(2)}</Text>
+            </View>
+            <View style={[styles.summaryRow, styles.grandTotal]}>
+              <Text style={styles.summaryTitle}>Grand Total:</Text>
+              <Text style={styles.summaryValue}>₹{roundedGrandTotal.toFixed(2)}</Text>
+            </View>
           </View>
-          <View style={[styles.summaryRow, styles.grandTotal]}>
-            <Text style={styles.summaryTitle}>Grand Total:</Text>
-            <Text style={styles.summaryValue}>₹{roundedGrandTotal.toFixed(2)}</Text>
+          
+          <View style={styles.footer}>
+            <Text>Thank you for your business!</Text>
           </View>
-        </View>
-        
-        <View style={styles.footer}>
-          <Text>Thank you for your business!</Text>
-        </View>
-      </Page>
-    </Document>
-  );
+        </Page>
+      </Document>
+    );
+  } else if (isEstimate) {
+    return (
+      <Document>
+        <Page size={[226, 'auto']} style={styles.thermalPage}>
+          <View style={styles.header}>
+            <Text style={styles.thermalCompanyName}>{company.name}</Text>
+            <Text style={styles.thermalBillInfo}>{company.address || 'Estimate'}</Text>
+            <Text style={styles.thermalBillInfo}>Bill No: {sale.billNumber} | Date: {new Date(sale.date).toLocaleDateString()}</Text>
+            <Text style={styles.thermalBillInfo}>Customer: {sale.customerName}</Text>
+          </View>
+          
+          <View style={styles.tableContainer}>
+            <View style={styles.thermalTableHeader}>
+              <Text style={styles.estimateDescription}>Desc</Text>
+              <Text style={styles.estimateQty}>Qty</Text>
+              <Text style={styles.estimateRate}>Nt.Rt</Text>
+              <Text style={styles.estimateAmount}>Nt.Amt</Text>
+            </View>
+            
+            {items.map((item, index) => (
+              <React.Fragment key={index}>
+                <View style={styles.thermalTableRow}>
+                  <Text style={styles.estimateDescription}>{item.name}</Text>
+                  <Text style={styles.estimateQty}>{item.quantity}</Text>
+                  <Text style={styles.estimateRate}>₹{item.unitPrice.toFixed(2)}</Text>
+                  <Text style={styles.estimateAmount}>₹{(item.unitPrice * item.quantity).toFixed(2)}</Text>
+                </View>
+                {/* Optional second line for packaging details or other notes */}
+                {item.packagingDetails && (
+                  <View style={styles.thermalItemDetails}>
+                    <Text>{item.packagingDetails}</Text>
+                  </View>
+                )}
+              </React.Fragment>
+            ))}
+          </View>
+          
+          <View style={styles.summaryContainer}>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryTitle}>Total Qty:</Text>
+              <Text style={styles.summaryValue}>{totalQuantity}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryTitle}>Total Amount:</Text>
+              <Text style={styles.summaryValue}>₹{totalExclusiveCost.toFixed(2)}</Text>
+            </View>
+            {hasDiscount && (
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryTitle}>Total Discount:</Text>
+                <Text style={styles.summaryValue}>₹{totalDiscount.toFixed(2)}</Text>
+              </View>
+            )}
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryTitle}>Round Off:</Text>
+              <Text style={styles.summaryValue}>₹{roundOff.toFixed(2)}</Text>
+            </View>
+            <View style={[styles.summaryRow, styles.grandTotal]}>
+              <Text style={styles.summaryTitle}>Grand Total:</Text>
+              <Text style={styles.summaryValue}>₹{roundedGrandTotal.toFixed(2)}</Text>
+            </View>
+          </View>
+          
+          <View style={styles.footer}>
+            <Text>Thank you for your business!</Text>
+          </View>
+        </Page>
+      </Document>
+    );
+  } else {
+    // Default template for other companies
+    return (
+      <Document>
+        <Page size="A4" style={styles.page}>
+          <View style={styles.header}>
+            <Text style={styles.companyName}>{company.name}</Text>
+            <Text>{company.address}</Text>
+            {company.gstin && <Text>GSTIN: {company.gstin}</Text>}
+          </View>
+          
+          <View style={styles.billInfo}>
+            <View style={styles.billInfoCol}>
+              <Text>Bill No: {sale.billNumber}</Text>
+              <Text>Date: {new Date(sale.date).toLocaleDateString()}</Text>
+            </View>
+            <View style={styles.billInfoCol}>
+              <Text>Customer: {sale.customerName}</Text>
+            </View>
+          </View>
+          
+          <View style={styles.tableContainer}>
+            <View style={styles.tableHeader}>
+              <Text style={styles.description}>Item</Text>
+              <Text style={styles.qty}>Qty</Text>
+              <Text style={styles.mrp}>MRP</Text>
+              {hasDiscount && <Text style={styles.discount}>Disc</Text>}
+              <Text style={styles.exclCost}>Excl</Text>
+              {hasGst && <Text style={styles.gst}>GST</Text>}
+              <Text style={styles.total}>Total</Text>
+            </View>
+            
+            {items.map((item, index) => (
+              <View key={index} style={styles.tableRow}>
+                <Text style={styles.description}>{item.name}</Text>
+                <Text style={styles.qty}>{item.quantity}</Text>
+                <Text style={styles.mrp}>₹{(item.mrp || item.unitPrice).toFixed(2)}</Text>
+                {hasDiscount && (
+                  <Text style={styles.discount}>
+                    {item.discountValue ? `₹${item.discountValue.toFixed(2)}` : '-'}
+                  </Text>
+                )}
+                <Text style={styles.exclCost}>₹{item.unitPrice.toFixed(2)}</Text>
+                {hasGst && (
+                  <Text style={styles.gst}>
+                    {item.gstPercentage ? `${item.gstPercentage}%` : '-'}
+                  </Text>
+                )}
+                <Text style={styles.total}>₹{item.totalPrice.toFixed(2)}</Text>
+              </View>
+            ))}
+          </View>
+          
+          <View style={styles.summaryContainer}>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryTitle}>Total Qty:</Text>
+              <Text style={styles.summaryValue}>{totalQuantity}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryTitle}>Total Excl. GST:</Text>
+              <Text style={styles.summaryValue}>₹{totalExclusiveCost.toFixed(2)}</Text>
+            </View>
+            {hasDiscount && (
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryTitle}>Total Discount:</Text>
+                <Text style={styles.summaryValue}>₹{totalDiscount.toFixed(2)}</Text>
+              </View>
+            )}
+            {hasGst && (
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryTitle}>Total GST:</Text>
+                <Text style={styles.summaryValue}>₹{totalGst.toFixed(2)}</Text>
+              </View>
+            )}
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryTitle}>Round Off:</Text>
+              <Text style={styles.summaryValue}>₹{roundOff.toFixed(2)}</Text>
+            </View>
+            <View style={[styles.summaryRow, styles.grandTotal]}>
+              <Text style={styles.summaryTitle}>Grand Total:</Text>
+              <Text style={styles.summaryValue}>₹{roundedGrandTotal.toFixed(2)}</Text>
+            </View>
+          </View>
+          
+          <View style={styles.footer}>
+            <Text>Thank you for your business!</Text>
+          </View>
+        </Page>
+      </Document>
+    );
+  }
 };
 
 export const ConsolidatedBillTemplate: React.FC<{ sale: Sale | Sale[] }> = ({ sale }) => {
@@ -250,12 +496,12 @@ export const ConsolidatedBillTemplate: React.FC<{ sale: Sale | Sale[] }> = ({ sa
 
   return (
     <Document>
-      <Page size={[226, 'auto']} style={styles.page}>
+      <Page size={[226, 'auto']} style={styles.thermalPage}>
         <View style={styles.header}>
-          <Text style={styles.companyName}>Consolidated Bill</Text>
-          <Text>Bill No: {billNumber}</Text>
-          <Text>Date: {date}</Text>
-          <Text>Customer: {customerName}</Text>
+          <Text style={styles.thermalCompanyName}>Consolidated Bill</Text>
+          <Text style={styles.thermalBillInfo}>Bill No: {billNumber}</Text>
+          <Text style={styles.thermalBillInfo}>Date: {date}</Text>
+          <Text style={styles.thermalBillInfo}>Customer: {customerName}</Text>
         </View>
         
         {/* Render each company's items */}
@@ -263,33 +509,19 @@ export const ConsolidatedBillTemplate: React.FC<{ sale: Sale | Sale[] }> = ({ sa
           <View key={groupIndex} style={styles.section}>
             <Text style={styles.companyHeader}>{group.company}</Text>
             <View style={styles.tableContainer}>
-              <View style={styles.tableHeader}>
-                <Text style={styles.description}>Item</Text>
-                <Text style={styles.qty}>Qty</Text>
-                <Text style={styles.mrp}>MRP</Text>
-                {hasDiscount && <Text style={styles.discount}>Disc</Text>}
-                <Text style={styles.exclCost}>Excl</Text>
-                {hasGst && <Text style={styles.gst}>GST</Text>}
-                <Text style={styles.total}>Total</Text>
+              <View style={styles.thermalTableHeader}>
+                <Text style={styles.thermalDescription}>Item</Text>
+                <Text style={styles.thermalQty}>Qty</Text>
+                <Text style={styles.thermalRate}>Rate</Text>
+                <Text style={styles.thermalAmount}>Amount</Text>
               </View>
               
               {group.items.map((item, index) => (
-                <View key={index} style={styles.tableRow}>
-                  <Text style={styles.description}>{item.name}</Text>
-                  <Text style={styles.qty}>{item.quantity}</Text>
-                  <Text style={styles.mrp}>₹{(item.mrp || item.unitPrice).toFixed(2)}</Text>
-                  {hasDiscount && (
-                    <Text style={styles.discount}>
-                      {item.discountValue ? `₹${item.discountValue.toFixed(2)}` : '-'}
-                    </Text>
-                  )}
-                  <Text style={styles.exclCost}>₹{(item.unitPrice * item.quantity).toFixed(2)}</Text>
-                  {hasGst && (
-                    <Text style={styles.gst}>
-                      {item.gstPercentage ? `${item.gstPercentage}%` : '-'}
-                    </Text>
-                  )}
-                  <Text style={styles.total}>₹{item.totalPrice.toFixed(2)}</Text>
+                <View key={index} style={styles.thermalTableRow}>
+                  <Text style={styles.thermalDescription}>{item.name}</Text>
+                  <Text style={styles.thermalQty}>{item.quantity}</Text>
+                  <Text style={styles.thermalRate}>₹{item.unitPrice.toFixed(2)}</Text>
+                  <Text style={styles.thermalAmount}>₹{(item.unitPrice * item.quantity).toFixed(2)}</Text>
                 </View>
               ))}
             </View>
@@ -334,4 +566,3 @@ export const ConsolidatedBillTemplate: React.FC<{ sale: Sale | Sale[] }> = ({ sa
     </Document>
   );
 };
-
