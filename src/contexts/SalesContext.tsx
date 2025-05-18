@@ -16,7 +16,7 @@ interface SalesContextType {
   updateSaleItem: (index: number, saleItem: SaleItem) => void;
   removeSaleItem: (index: number) => void;
   clearSaleItems: () => void;
-  createSale: (saleData: Omit<Sale, 'id' | 'createdAt'>) => void;
+  createSale: (saleData: Omit<Sale, 'id' | 'createdAt'>) => Sale | undefined;
   getSale: (id: string) => Sale | undefined;
 }
 
@@ -99,7 +99,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const createSale = (saleData: Omit<Sale, 'id' | 'createdAt'>) => {
     if (!saleData.items || saleData.items.length === 0) {
       toast.error('No items in sale');
-      return;
+      return undefined;
     }
     
     // Calculate total amount if not provided
