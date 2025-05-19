@@ -118,6 +118,18 @@ const EnhancedSaleForm: React.FC = () => {
     return summaries;
   }, [currentSaleItems, companies]);
 
+  // Create a filtered items list for search
+  const filteredSearchItems = useMemo(() => {
+    if (!searchTerm || !companyFilteredItems.length) return companyFilteredItems;
+    
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    return companyFilteredItems.filter(item => 
+      item.name.toLowerCase().includes(lowerSearchTerm) || 
+      item.itemId.toLowerCase().includes(lowerSearchTerm) || 
+      (item.hsnCode && item.hsnCode.toLowerCase().includes(lowerSearchTerm))
+    );
+  }, [searchTerm, companyFilteredItems]);
+
   // Initialize godown selection
   useEffect(() => {
     if (filteredGodowns.length > 0 && !selectedGodownId) {
@@ -423,12 +435,13 @@ const EnhancedSaleForm: React.FC = () => {
       const company = companies.find(c => c.id === companyId);
       const hasGst = items.some(item => item.gstPercentage && item.gstPercentage > 0);
       
-      const billType = hasGst ? 'GST' : 'NON-GST';
+      // Explicitly cast billType to the correct type
+      const billType = hasGst ? 'GST' as const : 'NON-GST' as const;
       const billNumber = `${billType}-${Date.now()}`; // Generate a bill number
       
       const billData = {
         companyId,
-        billNumber, // Add bill number here
+        billNumber,
         date: new Date().toISOString(),
         customerName,
         billType,
