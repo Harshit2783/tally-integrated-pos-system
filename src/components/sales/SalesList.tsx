@@ -15,23 +15,40 @@ import { PrintBillModal } from './PrintBillModal';
 const SalesList: React.FC = () => {
   const { filteredSales } = useSales();
   const { filteredGodowns } = useInventory();
-  const { currentCompany, companies } = useCompany();
+  const { currentCompany } = useCompany();
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [printType, setPrintType] = useState<'single' | 'all'>('single');
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
-  const godownNameMap = filteredGodowns.reduce((acc, godown) => {
-    acc[godown.id] = godown.name;
-    return acc;
-  }, {} as Record<string, string>);
+  // Create a map of godown IDs to names for quick lookup
+  const godownNameMap = React.useMemo(() => {
+    if (!filteredGodowns) return {};
+    
+    return filteredGodowns.reduce((acc, godown) => {
+      acc[godown.id] = godown.name;
+      return acc;
+    }, {} as Record<string, string>);
+  }, [filteredGodowns]);
+
+  // Check if data is loaded
+  React.useEffect(() => {
+    const hasGodowns = filteredGodowns && filteredGodowns.length > 0;
+    const hasSales = Array.isArray(filteredSales);
+    
+    setIsLoading(!(hasGodowns && hasSales));
+  }, [filteredGodowns, filteredSales]);
 
   const handleViewDetails = (sale: Sale) => {
     setSelectedSale(sale);
   };
 
   const handlePushToTally = async (sale: Sale) => {
-    if (!currentCompany) return;
+    if (!currentCompany) {
+      toast.error('No company selected');
+      return;
+    }
     
     try {
       const xml = generateTallyXML(sale, currentCompany);
@@ -59,7 +76,15 @@ const SalesList: React.FC = () => {
     setIsPrintModalOpen(false);
   };
 
-  if (filteredSales.length === 0) {
+  if (isLoading) {
+    return (
+      <Card className="p-6 text-center">
+        <p className="text-gray-500">Loading sales data...</p>
+      </Card>
+    );
+  }
+
+  if (!filteredSales || filteredSales.length === 0) {
     return (
       <Card className="p-6 text-center">
         <p className="text-gray-500">No sales found. Create a sale to get started.</p>

@@ -47,7 +47,7 @@ interface CompanySummary {
 const EnhancedSaleForm: React.FC = () => {
   const { companies, currentCompany } = useCompany();
   const { items, filteredItems, filteredGodowns } = useInventory();
-  const { addSaleItem, currentSaleItems, removeSaleItem, createSale, clearSaleItems, validateCompanyItems } = useSales();
+  const { addSaleItem, currentSaleItems, removeSaleItem, createSale, clearSaleItems, validateCompanyItems, updateSaleItem: contextUpdateSaleItem } = useSales();
 
   // Form state
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>(currentCompany?.id || '');
@@ -68,6 +68,7 @@ const EnhancedSaleForm: React.FC = () => {
   const [packagingDetails, setPackagingDetails] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [isItemPopoverOpen, setIsItemPopoverOpen] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Discount dialog state
   const [isDiscountDialogOpen, setIsDiscountDialogOpen] = useState<boolean>(false);
@@ -91,9 +92,13 @@ const EnhancedSaleForm: React.FC = () => {
   const companySummaries = useMemo(() => {
     const summaries: Record<string, CompanySummary> = {};
 
+    if (!currentSaleItems || currentSaleItems.length === 0) {
+      return summaries;
+    }
+
     currentSaleItems.forEach(item => {
       if (!summaries[item.companyId]) {
-        const company = companies.find(c => c.id === item.companyId);
+        const company = companies?.find(c => c.id === item.companyId);
         summaries[item.companyId] = {
           id: item.companyId,
           name: company ? company.name : 'Unknown Company',
@@ -120,26 +125,37 @@ const EnhancedSaleForm: React.FC = () => {
 
   // Create a filtered items list for search
   const filteredSearchItems = useMemo(() => {
-    if (!searchTerm || !companyFilteredItems.length) return companyFilteredItems;
+    if (!searchTerm || !companyFilteredItems || companyFilteredItems.length === 0) {
+      return companyFilteredItems || [];
+    }
     
     const lowerSearchTerm = searchTerm.toLowerCase();
     return companyFilteredItems.filter(item => 
-      item.name.toLowerCase().includes(lowerSearchTerm) || 
-      item.itemId.toLowerCase().includes(lowerSearchTerm) || 
+      (item.name && item.name.toLowerCase().includes(lowerSearchTerm)) || 
+      (item.itemId && item.itemId.toLowerCase().includes(lowerSearchTerm)) || 
       (item.hsnCode && item.hsnCode.toLowerCase().includes(lowerSearchTerm))
     );
   }, [searchTerm, companyFilteredItems]);
 
+  // Set loading state
+  useEffect(() => {
+    const hasCompanies = companies && companies.length > 0;
+    const hasItems = items && items.length > 0;
+    const hasGodowns = filteredGodowns && filteredGodowns.length > 0;
+    
+    setIsLoading(!(hasCompanies && hasItems && hasGodowns));
+  }, [companies, items, filteredGodowns]);
+
   // Initialize godown selection
   useEffect(() => {
-    if (filteredGodowns.length > 0 && !selectedGodownId) {
+    if (filteredGodowns && filteredGodowns.length > 0 && !selectedGodownId) {
       setSelectedGodownId(filteredGodowns[0].id);
     }
   }, [filteredGodowns, selectedGodownId]);
 
   // Filter items by selected company
   useEffect(() => {
-    if (selectedCompanyId) {
+    if (selectedCompanyId && items) {
       const itemsFromCompany = items.filter(item => item.companyId === selectedCompanyId);
       setCompanyFilteredItems(itemsFromCompany);
     } else {
@@ -159,7 +175,7 @@ const EnhancedSaleForm: React.FC = () => {
 
   // Update item details when item selection changes
   useEffect(() => {
-    if (selectedItemId) {
+    if (selectedItemId && companyFilteredItems && companyFilteredItems.length > 0) {
       const item = companyFilteredItems.find((item) => item.id === selectedItemId);
       
       if (item) {
@@ -270,7 +286,7 @@ const EnhancedSaleForm: React.FC = () => {
     const totalPrice = discountedBaseAmount + itemGstAmount;
 
     // Create sale item
-    const company = companies.find(c => c.id === selectedCompanyId);
+    const company = companies?.find(c => c.id === selectedCompanyId);
     const saleItem: SaleItem = {
       itemId: selectedItem.id,
       companyId: selectedCompanyId,
@@ -290,19 +306,29 @@ const EnhancedSaleForm: React.FC = () => {
       packagingDetails: packagingDetails || undefined
     };
 
-    addSaleItem(saleItem);
-    
-    // Reset form fields for next item
-    setSelectedItemId('');
-    setSelectedItem(null);
-    setQuantity(1);
-    setDiscount(0);
-    setSearchTerm('');
-    setIsItemPopoverOpen(false);
+    try {
+      addSaleItem(saleItem);
+      
+      // Reset form fields for next item
+      setSelectedItemId('');
+      setSelectedItem(null);
+      setQuantity(1);
+      setDiscount(0);
+      setSearchTerm('');
+      setIsItemPopoverOpen(false);
+    } catch (error) {
+      toast.error('Error adding item to sale');
+      console.error('Error adding item to sale:', error);
+    }
   };
   
   // Open discount dialog for an item
   const openDiscountDialog = (index: number) => {
+    if (!currentSaleItems || index < 0 || index >= currentSaleItems.length) {
+      toast.error('Invalid item selected');
+      return;
+    }
+    
     const item = currentSaleItems[index];
     
     setDiscountItemIndex(index);
@@ -320,7 +346,7 @@ const EnhancedSaleForm: React.FC = () => {
   
   // Apply discount to an item
   const applyItemDiscount = () => {
-    if (discountItemIndex < 0) return;
+    if (discountItemIndex < 0 || !currentSaleItems || discountItemIndex >= currentSaleItems.length) return;
     
     const item = currentSaleItems[discountItemIndex];
     const updatedItem = { ...item };
@@ -356,25 +382,34 @@ const EnhancedSaleForm: React.FC = () => {
     updatedItem.totalPrice = discountedBaseAmount + itemGstAmount;
     updatedItem.totalAmount = updatedItem.totalPrice;
     
-    // Update item in list
-    const updatedItems = [...currentSaleItems];
-    updatedItems[discountItemIndex] = updatedItem;
-    
-    // Use the updateSaleItem function from context if available, otherwise fallback
-    if (typeof updateSaleItem === 'function') {
-      updateSaleItem(discountItemIndex, updatedItem);
-    } else {
-      // This is a fallback in case updateSaleItem isn't provided by the context
-      removeSaleItem(discountItemIndex);
-      addSaleItem(updatedItem);
+    try {
+      // Use the updateSaleItem function from context if available, otherwise fallback
+      if (typeof contextUpdateSaleItem === 'function') {
+        contextUpdateSaleItem(discountItemIndex, updatedItem);
+      } else {
+        // This is a fallback in case updateSaleItem isn't provided by the context
+        removeSaleItem(discountItemIndex);
+        addSaleItem(updatedItem);
+      }
+      
+      setIsDiscountDialogOpen(false);
+      toast.success('Discount applied successfully');
+    } catch (error) {
+      toast.error('Error applying discount');
+      console.error('Error applying discount:', error);
     }
-    
-    setIsDiscountDialogOpen(false);
-    toast.success('Discount applied successfully');
   };
 
   // Calculate summary values whenever sale items change
   useEffect(() => {
+    if (!currentSaleItems || currentSaleItems.length === 0) {
+      setSubtotal(0);
+      setTotalDiscount(0);
+      setTotalGst(0);
+      setGrandTotal(0);
+      return;
+    }
+    
     let newSubtotal = 0;
     let newTotalDiscount = 0;
     let newTotalGst = 0;
@@ -396,7 +431,7 @@ const EnhancedSaleForm: React.FC = () => {
   
   // Handle create sale
   const handleCreateSale = () => {
-    if (currentSaleItems.length === 0) {
+    if (!currentSaleItems || currentSaleItems.length === 0) {
       toast.error('No items added to sale');
       return;
     }
@@ -411,68 +446,73 @@ const EnhancedSaleForm: React.FC = () => {
       return;
     }
     
-    // Validate company-specific rules
-    const validation = validateCompanyItems(currentSaleItems);
-    if (!validation.valid) {
-      toast.error(validation.errorMessage || 'Invalid items');
-      return;
-    }
-    
-    // Group items by company to create separate bills if needed
-    const itemsByCompany: Record<string, SaleItem[]> = {};
-    
-    currentSaleItems.forEach(item => {
-      if (!itemsByCompany[item.companyId]) {
-        itemsByCompany[item.companyId] = [];
+    try {
+      // Validate company-specific rules
+      const validation = validateCompanyItems(currentSaleItems);
+      if (!validation.valid) {
+        toast.error(validation.errorMessage || 'Invalid items');
+        return;
       }
-      itemsByCompany[item.companyId].push(item);
-    });
-    
-    // Create bills for each company
-    const createdSales = [];
-    
-    for (const [companyId, items] of Object.entries(itemsByCompany)) {
-      const company = companies.find(c => c.id === companyId);
-      const hasGst = items.some(item => item.gstPercentage && item.gstPercentage > 0);
       
-      // Explicitly cast billType to the correct type
-      const billType = hasGst ? 'GST' as const : 'NON-GST' as const;
-      const billNumber = `${billType}-${Date.now()}`; // Generate a bill number
+      // Group items by company to create separate bills if needed
+      const itemsByCompany: Record<string, SaleItem[]> = {};
       
-      const billData = {
-        companyId,
-        billNumber,
-        date: new Date().toISOString(),
-        customerName,
-        billType,
-        godownId: selectedGodownId,
-        items,
-        totalAmount: items.reduce((sum, item) => sum + item.totalPrice, 0)
-      };
+      currentSaleItems.forEach(item => {
+        if (!itemsByCompany[item.companyId]) {
+          itemsByCompany[item.companyId] = [];
+        }
+        itemsByCompany[item.companyId].push(item);
+      });
       
-      const sale = createSale(billData);
-      if (sale) {
-        createdSales.push(sale);
+      // Create bills for each company
+      const createdSales = [];
+      
+      for (const [companyId, items] of Object.entries(itemsByCompany)) {
+        const company = companies?.find(c => c.id === companyId);
+        const hasGst = items.some(item => item.gstPercentage && item.gstPercentage > 0);
+        
+        // Explicitly cast billType to the correct type
+        const billType = hasGst ? 'GST' as const : 'NON-GST' as const;
+        const billNumber = `${billType}-${Date.now()}`; // Generate a bill number
+        
+        const billData = {
+          companyId,
+          billNumber,
+          date: new Date().toISOString(),
+          customerName,
+          billType,
+          godownId: selectedGodownId,
+          items,
+          totalAmount: items.reduce((sum, item) => sum + item.totalPrice, 0)
+        };
+        
+        const sale = createSale(billData);
+        if (sale) {
+          createdSales.push(sale);
+        }
       }
-    }
-    
-    if (createdSales.length > 0) {
-      // Set created sales for printing
-      setCreatedSale(createdSales.length === 1 ? createdSales[0] : createdSales);
       
-      // Ask user about printing
-      setPrintType(createdSales.length === 1 ? 'single' : 'all');
-      setIsPrintModalOpen(true);
-      
-      // Reset form
-      setCustomerName('');
-      clearSaleItems();
+      if (createdSales.length > 0) {
+        // Set created sales for printing
+        setCreatedSale(createdSales.length === 1 ? createdSales[0] : createdSales);
+        
+        // Ask user about printing
+        setPrintType(createdSales.length === 1 ? 'single' : 'all');
+        setIsPrintModalOpen(true);
+        
+        // Reset form
+        setCustomerName('');
+        clearSaleItems();
+      }
+    } catch (error) {
+      toast.error('Error creating sale');
+      console.error('Error creating sale:', error);
     }
   };
   
   // Handle preview consolidated bill
   const handlePreviewConsolidatedBill = () => {
-    if (currentSaleItems.length === 0) {
+    if (!currentSaleItems || currentSaleItems.length === 0) {
       toast.error('No items added to sale');
       return;
     }
@@ -481,27 +521,45 @@ const EnhancedSaleForm: React.FC = () => {
   };
 
   const getItemDisplayDetails = (item: Item) => {
-    let details = item.name;
+    if (!item) return "";
+    
+    let details = item.name || "";
     if (item.type === 'GST' && item.gstPercentage) {
       details += ` (GST: ${item.gstPercentage}%)`;
     }
-    details += ` - ₹${item.unitPrice}`;
+    details += ` - ₹${item.unitPrice !== undefined ? item.unitPrice : 0}`;
     return details;
   };
 
   // Add updateSaleItem if it doesn't exist in the context
   const updateSaleItem = (index: number, saleItem: SaleItem) => {
-    const updatedItems = [...currentSaleItems];
-    updatedItems[index] = saleItem;
-    // Assuming we have access to a setter for currentSaleItems
-    // This is a fallback that may not work if the context doesn't expose this functionality
-    const newItems = [...currentSaleItems];
-    newItems[index] = saleItem;
+    if (typeof contextUpdateSaleItem === 'function') {
+      contextUpdateSaleItem(index, saleItem);
+      return;
+    }
     
-    // Remove and add to simulate update
-    removeSaleItem(index);
-    addSaleItem(saleItem);
+    // Fallback implementation
+    try {
+      const newItems = [...currentSaleItems];
+      newItems[index] = saleItem;
+      
+      // Remove and add to simulate update
+      removeSaleItem(index);
+      addSaleItem(saleItem);
+    } catch (error) {
+      console.error('Error updating sale item:', error);
+      toast.error('Failed to update item');
+    }
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <Card className="p-6 text-center">
+        <p>Loading sales form...</p>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -529,7 +587,7 @@ const EnhancedSaleForm: React.FC = () => {
                 <SelectValue placeholder="Select godown" />
               </SelectTrigger>
               <SelectContent>
-                {filteredGodowns.map((godown) => (
+                {filteredGodowns && filteredGodowns.map((godown) => (
                   <SelectItem key={godown.id} value={godown.id}>
                     {godown.name}
                   </SelectItem>
@@ -552,7 +610,7 @@ const EnhancedSaleForm: React.FC = () => {
                 <SelectValue placeholder="Select a company" />
               </SelectTrigger>
               <SelectContent>
-                {companies.map((company) => (
+                {companies && companies.map((company) => (
                   <SelectItem key={company.id} value={company.id}>
                     {company.name}
                   </SelectItem>
@@ -586,8 +644,8 @@ const EnhancedSaleForm: React.FC = () => {
                     className="h-9"
                   />
                   <CommandEmpty>No items found.</CommandEmpty>
-                  <CommandGroup className="max-h-[300px] overflow-auto">
-                    {filteredSearchItems.map((item) => (
+                  <CommandGroup>
+                    {filteredSearchItems && filteredSearchItems.length > 0 ? filteredSearchItems.map((item) => (
                       <CommandItem
                         key={item.id}
                         value={item.id}
@@ -608,14 +666,13 @@ const EnhancedSaleForm: React.FC = () => {
                           <CheckIcon className="h-4 w-4" />
                         )}
                       </CommandItem>
-                    ))}
+                    )) : null}
                   </CommandGroup>
                 </Command>
               </PopoverContent>
             </Popover>
           </div>
           
-          {/* Quantity and Unit - 3 columns */}
           <div className="col-span-6 md:col-span-2">
             <Label htmlFor="quantity">Quantity</Label>
             <Input
@@ -644,7 +701,6 @@ const EnhancedSaleForm: React.FC = () => {
           </div>
         </div>
 
-        {/* GST, HSN, and pricing */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
           <div>
             <Label htmlFor="mrp">MRP</Label>
@@ -712,7 +768,6 @@ const EnhancedSaleForm: React.FC = () => {
           </div>
         </div>
         
-        {/* HSN Code and Packaging Details */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div>
             <Label htmlFor="hsnCode">HSN Code *</Label>
@@ -747,7 +802,6 @@ const EnhancedSaleForm: React.FC = () => {
           </div>
         </div>
         
-        {/* Discount and Add Item button */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
           <div>
             <Label htmlFor="perUnit">Per ({salesUnit})</Label>
@@ -839,7 +893,7 @@ const EnhancedSaleForm: React.FC = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {currentSaleItems.length > 0 ? (
+            {currentSaleItems && currentSaleItems.length > 0 ? (
               currentSaleItems.map((item, index) => (
                 <TableRow key={index}>
                   <TableCell>{item.companyName}</TableCell>
@@ -853,7 +907,7 @@ const EnhancedSaleForm: React.FC = () => {
                     )}
                   </TableCell>
                   <TableCell className="text-center">{item.quantity} {item.salesUnit}</TableCell>
-                  <TableCell className="text-right">₹{(item.mrp || item.unitPrice).toFixed(2)}</TableCell>
+                  <TableCell className="text-right">₹{((item.mrp || item.unitPrice) || 0).toFixed(2)}</TableCell>
                   <TableCell className="text-right">
                     ₹{item.unitPrice.toFixed(2)} 
                     <div className="text-xs text-gray-500">
@@ -923,7 +977,7 @@ const EnhancedSaleForm: React.FC = () => {
       </Card>
       
       {/* Company-wise Summaries */}
-      {currentSaleItems.length > 0 && (
+      {currentSaleItems && currentSaleItems.length > 0 && Object.keys(companySummaries).length > 0 && (
         <Card className="p-6">
           <h3 className="text-lg font-semibold mb-4">Company-wise Summary</h3>
           <div className="grid gap-4">
@@ -1070,7 +1124,7 @@ const EnhancedSaleForm: React.FC = () => {
       )}
 
       {/* Consolidated Bill Preview */}
-      {consolidatedPreviewOpen && currentSaleItems.length > 0 && (
+      {consolidatedPreviewOpen && currentSaleItems && currentSaleItems.length > 0 && (
         <Dialog open={consolidatedPreviewOpen} onOpenChange={setConsolidatedPreviewOpen}>
           <DialogContent className="max-w-3xl">
             <DialogHeader>
@@ -1110,7 +1164,7 @@ const EnhancedSaleForm: React.FC = () => {
                               )}
                             </td>
                             <td className="py-1 text-center">{item.quantity}</td>
-                            <td className="py-1 text-right">₹{(item.mrp || item.unitPrice).toFixed(2)}</td>
+                            <td className="py-1 text-right">₹{((item.mrp || item.unitPrice) || 0).toFixed(2)}</td>
                             <td className="py-1 text-right">₹{(item.discountValue || 0).toFixed(2)}</td>
                             <td className="py-1 text-right">₹{(item.unitPrice * item.quantity).toFixed(2)}</td>
                             <td className="py-1 text-right">₹{(item.gstAmount || 0).toFixed(2)}</td>
