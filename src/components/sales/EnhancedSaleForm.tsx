@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useInventory } from '../../contexts/InventoryContext';
@@ -9,13 +8,17 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ShoppingCart, Plus, Trash2, Printer, FileText, AlertCircle } from 'lucide-react';
+import { ShoppingCart, Plus, Trash2, Printer, FileText, AlertCircle, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { calculateExclusiveCost, calculateMRP, calculateFinalPrice } from '../../utils/pricingUtils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { PrintBillModal } from './PrintBillModal';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CheckIcon, ChevronDown } from 'lucide-react';
+import { cn } from "@/lib/utils";
 
 // Define sales units
 const SALES_UNITS = ['Case', 'Packet', 'Piece'];
@@ -53,6 +56,8 @@ const EnhancedSaleForm: React.FC = () => {
   const [companyFilteredItems, setCompanyFilteredItems] = useState<Item[]>([]);
   const [hsnCode, setHsnCode] = useState<string>('');
   const [packagingDetails, setPackagingDetails] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [isItemPopoverOpen, setIsItemPopoverOpen] = useState<boolean>(false);
 
   // Discount dialog state
   const [isDiscountDialogOpen, setIsDiscountDialogOpen] = useState<boolean>(false);
@@ -91,6 +96,17 @@ const EnhancedSaleForm: React.FC = () => {
     return company && company.name === 'Estimate';
   }, [selectedCompanyId, companies]);
 
+  // Filter items by search term
+  const filteredSearchItems = useMemo(() => {
+    if (!searchTerm.trim()) return companyFilteredItems;
+    
+    return companyFilteredItems.filter(item => 
+      item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      item.itemId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.hsnCode && item.hsnCode.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  }, [companyFilteredItems, searchTerm]);
+
   // Set default values based on company
   useEffect(() => {
     if (isMansan) {
@@ -122,6 +138,7 @@ const EnhancedSaleForm: React.FC = () => {
     setGstRate(isMansan ? 18 : 0);
     setHsnCode('');
     setPackagingDetails('');
+    setSearchTerm('');
   }, [selectedCompanyId, items, isMansan]);
 
   // Update item details when item selection changes
@@ -186,336 +203,14 @@ const EnhancedSaleForm: React.FC = () => {
     }
   }, [selectedItemId, companyFilteredItems, quantity, isMansan, isEstimate]);
 
-  // Recalculate summary values when items change
-  useEffect(() => {
-    let subtotalValue = 0;
-    let gstValue = 0;
-    let discountValue = 0;
-    let grandTotalValue = 0;
-
-    currentSaleItems.forEach(item => {
-      const itemExclusiveCost = item.unitPrice * item.quantity;
-      subtotalValue += itemExclusiveCost;
-      gstValue += item.gstAmount || 0;
-      discountValue += item.discountValue || 0;
-      grandTotalValue += item.totalPrice;
-    });
-
-    setSubtotal(subtotalValue);
-    setTotalGst(gstValue);
-    setTotalDiscount(discountValue);
-    setGrandTotal(grandTotalValue);
-  }, [currentSaleItems]);
-
-  // Update MRP when exclusive cost or GST rate changes
-  useEffect(() => {
-    if (gstRate > 0) {
-      const calculatedMrp = calculateMRP(exclusiveCost, gstRate);
-      setMrp(calculatedMrp);
-      
-      // Calculate GST amount for the quantity
-      const calculatedGstAmount = calculatedMrp - exclusiveCost;
-      setGstAmount(calculatedGstAmount * quantity);
-    } else {
-      // For non-GST items
-      setMrp(exclusiveCost);
-      setGstAmount(0);
+  const getItemDisplayDetails = (item: Item) => {
+    let details = item.name;
+    if (item.type === 'GST' && item.gstPercentage) {
+      details += ` (GST: ${item.gstPercentage}%)`;
     }
-  }, [exclusiveCost, gstRate, quantity]);
-
-  // Handle changes to the MRP
-  const handleMrpChange = (value: number) => {
-    setMrp(value);
-    
-    if (gstRate > 0) {
-      // Calculate exclusive cost from MRP
-      const calculatedExclusiveCost = calculateExclusiveCost(value, gstRate);
-      setExclusiveCost(calculatedExclusiveCost);
-      
-      // Calculate GST amount
-      const calculatedGstAmount = value - calculatedExclusiveCost;
-      setGstAmount(calculatedGstAmount * quantity);
-    } else {
-      // For non-GST items, MRP is the same as exclusive cost
-      setExclusiveCost(value);
-    }
+    details += ` - ₹${item.unitPrice}`;
+    return details;
   };
-
-  // Get the selected company object
-  const getSelectedCompany = (): Company | undefined => {
-    return companies.find(company => company.id === selectedCompanyId);
-  };
-
-  const handleAddItem = () => {
-    if (!selectedCompanyId) {
-      toast.error('Please select a company');
-      return;
-    }
-
-    if (!selectedItem) {
-      toast.error('Please select an item');
-      return;
-    }
-
-    if (quantity <= 0) {
-      toast.error('Quantity must be greater than 0');
-      return;
-    }
-
-    if (quantity > selectedItem.stockQuantity) {
-      toast.error(`Only ${selectedItem.stockQuantity} units available in stock`);
-      return;
-    }
-    
-    // Validate HSN code for Mansan Laal
-    if (isMansan && !hsnCode.trim()) {
-      toast.error('HSN Code is required for Mansan Laal and Sons items');
-      return;
-    }
-
-    // Calculate final price after discount and GST
-    const finalPriceCalculation = calculateFinalPrice(
-      exclusiveCost * quantity,
-      gstRate,
-      discount,
-      discountType === 'percentage'
-    );
-
-    const selectedCompany = getSelectedCompany();
-    if (!selectedCompany) {
-      toast.error('Selected company not found');
-      return;
-    }
-
-    const saleItem: SaleItem = {
-      itemId: selectedItem.id,
-      companyId: selectedCompanyId,
-      companyName: selectedCompany.name,
-      name: selectedItem.name,
-      quantity,
-      unitPrice: exclusiveCost, // exclusive cost per unit
-      mrp: mrp, // MRP per unit
-      discountValue: finalPriceCalculation.discountAmount, // total discount amount
-      discountPercentage: discountType === 'percentage' ? discount : undefined,
-      gstPercentage: gstRate > 0 ? gstRate : undefined,
-      gstAmount: finalPriceCalculation.gstAmount, // total GST amount
-      totalPrice: finalPriceCalculation.finalPrice, // final price after GST and discount
-      totalAmount: finalPriceCalculation.finalPrice,
-      salesUnit,
-      hsnCode: hsnCode.trim() || undefined, // Add HSN code if provided
-      packagingDetails: packagingDetails.trim() || undefined, // Add packaging details if provided
-    };
-
-    addSaleItem(saleItem);
-    
-    // Reset form fields for next item
-    setSelectedItemId('');
-    setSelectedItem(null);
-    setQuantity(1);
-    setMrp(0);
-    setExclusiveCost(0);
-    setGstRate(isMansan ? 18 : 0);
-    setGstAmount(0);
-    setDiscount(0);
-    setHsnCode('');
-    setPackagingDetails('');
-  };
-
-  const openDiscountDialog = (index: number) => {
-    const item = currentSaleItems[index];
-    if (!item) return;
-
-    setDiscountItemIndex(index);
-    setDialogDiscount(item.discountValue || 0);
-    setDialogDiscountType('amount');
-    setIsDiscountDialogOpen(true);
-  };
-
-  const applyItemDiscount = () => {
-    if (discountItemIndex === -1) return;
-    
-    const item = currentSaleItems[discountItemIndex];
-    if (!item) return;
-
-    // Validate discount amount
-    if (dialogDiscount < 0) {
-      toast.error('Discount cannot be negative');
-      return;
-    }
-
-    // For percentage discount, ensure it's not more than 100%
-    if (dialogDiscountType === 'percentage' && dialogDiscount > 100) {
-      toast.error('Discount percentage cannot exceed 100%');
-      return;
-    }
-
-    // For amount discount, ensure it's not more than the exclusive cost
-    if (dialogDiscountType === 'amount' && dialogDiscount > (item.unitPrice * item.quantity)) {
-      toast.error('Discount cannot be greater than the item cost');
-      return;
-    }
-
-    // Calculate new total price with discount
-    const finalPriceCalculation = calculateFinalPrice(
-      item.unitPrice * item.quantity,
-      item.gstPercentage || 0,
-      dialogDiscount,
-      dialogDiscountType === 'percentage'
-    );
-
-    // Update the item
-    const updatedItem: SaleItem = {
-      ...item,
-      discountValue: finalPriceCalculation.discountAmount,
-      discountPercentage: dialogDiscountType === 'percentage' ? dialogDiscount : undefined,
-      gstAmount: finalPriceCalculation.gstAmount,
-      totalPrice: finalPriceCalculation.finalPrice,
-      totalAmount: finalPriceCalculation.finalPrice
-    };
-
-    // Replace the item in the list
-    const updatedItems = [...currentSaleItems];
-    updatedItems[discountItemIndex] = updatedItem;
-    
-    // Clear the current items and add the updated ones
-    clearSaleItems();
-    updatedItems.forEach(item => addSaleItem(item));
-
-    // Close the dialog
-    setIsDiscountDialogOpen(false);
-    setDiscountItemIndex(-1);
-    toast.success('Discount applied successfully');
-  };
-
-  const handleCreateSale = () => {
-    if (customerName.trim() === '') {
-      toast.error('Please enter customer name');
-      return;
-    }
-
-    if (selectedGodownId === '') {
-      toast.error('Please select a godown');
-      return;
-    }
-
-    if (currentSaleItems.length === 0) {
-      toast.error('No items added to the sale');
-      return;
-    }
-
-    // Validate company-specific rules
-    const validation = validateCompanyItems(currentSaleItems);
-    if (!validation.valid) {
-      toast.error(validation.errorMessage || 'Invalid items');
-      return;
-    }
-
-    // Group items by company for creating bills
-    const itemsByCompany: Record<string, SaleItem[]> = {};
-    currentSaleItems.forEach(item => {
-      if (!itemsByCompany[item.companyId]) {
-        itemsByCompany[item.companyId] = [];
-      }
-      itemsByCompany[item.companyId].push(item);
-    });
-
-    // Create bills for each company
-    const createdSales: any[] = [];
-    Object.entries(itemsByCompany).forEach(([companyId, items]) => {
-      const company = companies.find(c => c.id === companyId);
-      if (!company) return;
-
-      // Determine bill type based on company and items
-      const hasGst = items.some(item => item.gstPercentage && item.gstPercentage > 0);
-      const billType = hasGst ? 'GST' : 'NON-GST';
-
-      // Calculate totals for this company
-      const companySubtotal = items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
-      const companyDiscount = items.reduce((sum, item) => sum + (item.discountValue || 0), 0);
-      const companyGst = items.reduce((sum, item) => sum + (item.gstAmount || 0), 0);
-      const companyTotal = items.reduce((sum, item) => sum + item.totalPrice, 0);
-
-      // Create the sale
-      const newSale = createSale({
-        companyId: company.id,
-        billNumber: `${company.name === 'Estimate' ? 'EST' : (billType === 'GST' ? 'GST' : 'NON')}-${Date.now()}`,
-        date: new Date().toISOString(),
-        customerName,
-        billType,
-        godownId: selectedGodownId,
-        totalAmount: companyTotal,
-        totalDiscount: companyDiscount,
-        totalExclusiveCost: companySubtotal,
-        totalGst: companyGst,
-        items,
-      });
-      
-      // Only push to createdSales if newSale is defined
-      if (newSale) {
-        createdSales.push(newSale);
-      }
-    });
-    
-    if (createdSales.length > 0) {
-      setCreatedSale(createdSales);
-      setPrintType(createdSales.length > 1 ? 'consolidated' : 'all');
-      setSelectedPrintCompanyId(null);
-      setIsPrintModalOpen(true);
-    }
-
-    // Reset form
-    setCustomerName('');
-    clearSaleItems();
-  };
-
-  const handlePreviewConsolidatedBill = () => {
-    if (currentSaleItems.length === 0) {
-      toast.error('No items added to the sale');
-      return;
-    }
-    
-    // Validate company-specific rules
-    const validation = validateCompanyItems(currentSaleItems);
-    if (!validation.valid) {
-      toast.error(validation.errorMessage || 'Invalid items');
-      return;
-    }
-    
-    setConsolidatedPreviewOpen(true);
-  };
-
-  // Company-wise summary calculation
-  const companySummaries = useMemo(() => {
-    const summaries: Record<string, { 
-      id: string;    // Adding the id property
-      name: string; 
-      subtotal: number; 
-      discount: number; 
-      gst: number; 
-      total: number; 
-    }> = {};
-    
-    currentSaleItems.forEach(item => {
-      if (!summaries[item.companyId]) {
-        summaries[item.companyId] = {
-          id: item.companyId,  // Store the company ID
-          name: item.companyName,
-          subtotal: 0,
-          discount: 0,
-          gst: 0,
-          total: 0,
-        };
-      }
-      
-      const summary = summaries[item.companyId];
-      summary.subtotal += item.unitPrice * item.quantity;
-      summary.discount += item.discountValue || 0;
-      summary.gst += item.gstAmount || 0;
-      summary.total += item.totalPrice;
-    });
-    
-    return summaries;
-  }, [currentSaleItems]);
 
   return (
     <div className="space-y-6">
@@ -575,25 +270,58 @@ const EnhancedSaleForm: React.FC = () => {
             </Select>
           </div>
           
-          {/* Item Selection - 5 columns */}
+          {/* Item Selection with Search - 5 columns */}
           <div className="col-span-12 md:col-span-5">
             <Label htmlFor="item">Item Name</Label>
-            <Select 
-              value={selectedItemId} 
-              onValueChange={setSelectedItemId}
-              disabled={!selectedCompanyId}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={selectedCompanyId ? "Select an item" : "Select company first"} />
-              </SelectTrigger>
-              <SelectContent>
-                {companyFilteredItems.map((item) => (
-                  <SelectItem key={item.id} value={item.id}>
-                    {item.name} - ₹{item.unitPrice} {item.type === 'GST' && `(GST: ${item.gstPercentage}%)`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Popover open={isItemPopoverOpen} onOpenChange={setIsItemPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={isItemPopoverOpen}
+                  className="w-full justify-between"
+                  disabled={!selectedCompanyId}
+                >
+                  {selectedItem ? getItemDisplayDetails(selectedItem) : (selectedCompanyId ? "Select an item" : "Select company first")}
+                  <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[400px] p-0">
+                <Command>
+                  <CommandInput 
+                    placeholder="Search items..." 
+                    value={searchTerm}
+                    onValueChange={setSearchTerm}
+                    className="h-9"
+                  />
+                  <CommandEmpty>No items found.</CommandEmpty>
+                  <CommandGroup className="max-h-[300px] overflow-auto">
+                    {filteredSearchItems.map((item) => (
+                      <CommandItem
+                        key={item.id}
+                        value={item.id}
+                        onSelect={() => {
+                          setSelectedItemId(item.id);
+                          setIsItemPopoverOpen(false);
+                          setSearchTerm('');
+                        }}
+                        className="flex items-center justify-between"
+                      >
+                        <div className="flex flex-col">
+                          <span>{item.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {item.itemId} {item.type === 'GST' ? `(GST: ${item.gstPercentage}%)` : '(Non-GST)'} - ₹{item.unitPrice}
+                          </span>
+                        </div>
+                        {item.id === selectedItemId && (
+                          <CheckIcon className="h-4 w-4" />
+                        )}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
           
           {/* Quantity and Unit - 3 columns */}
