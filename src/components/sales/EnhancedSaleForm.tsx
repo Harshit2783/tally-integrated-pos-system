@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useInventory } from '../../contexts/InventoryContext';
@@ -18,8 +17,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { PrintBillModal } from './PrintBillModal';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CheckIcon, ChevronDown } from 'lucide-react';
 import { cn } from "@/lib/utils";
+import { CheckIcon, ChevronDown } from 'lucide-react';
 
 // Define sales units
 const SALES_UNITS = ['Case', 'Packet', 'Piece'];
@@ -79,7 +78,6 @@ const EnhancedSaleForm: React.FC = () => {
   // Bill modal state
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [printType, setPrintType] = useState<'single' | 'all' | 'consolidated'>('all');
-  const [selectedPrintCompanyId, setSelectedPrintCompanyId] = useState<string | null>(null);
   const [createdSale, setCreatedSale] = useState<any>(null);
   const [consolidatedPreviewOpen, setConsolidatedPreviewOpen] = useState(false);
 
@@ -127,42 +125,6 @@ const EnhancedSaleForm: React.FC = () => {
     }
   }, [filteredGodowns, selectedGodownId]);
 
-  // Check if selected company is one of our special companies
-  const isMansan = useMemo(() => {
-    const company = companies.find(c => c.id === selectedCompanyId);
-    return company && company.name === 'Mansan Laal and Sons';
-  }, [selectedCompanyId, companies]);
-
-  const isEstimate = useMemo(() => {
-    const company = companies.find(c => c.id === selectedCompanyId);
-    return company && company.name === 'Estimate';
-  }, [selectedCompanyId, companies]);
-
-  // Filter items by search term
-  const filteredSearchItems = useMemo(() => {
-    if (!searchTerm.trim()) return companyFilteredItems;
-    
-    return companyFilteredItems.filter(item => 
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      item.itemId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.hsnCode && item.hsnCode.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-  }, [companyFilteredItems, searchTerm]);
-
-  // Set default values based on company
-  useEffect(() => {
-    if (isMansan) {
-      // Set default GST rate for Mansan
-      if (gstRate === 0) {
-        setGstRate(18); // Default to 18% GST
-      }
-    }
-    if (isEstimate) {
-      // Make sure GST rate is 0 for Estimate
-      setGstRate(0);
-    }
-  }, [isMansan, isEstimate]);
-
   // Filter items by selected company
   useEffect(() => {
     if (selectedCompanyId) {
@@ -177,11 +139,11 @@ const EnhancedSaleForm: React.FC = () => {
     setSelectedItem(null);
     setMrp(0);
     setExclusiveCost(0);
-    setGstRate(isMansan ? 18 : 0);
+    setGstRate(0);
     setHsnCode('');
     setPackagingDetails('');
     setSearchTerm('');
-  }, [selectedCompanyId, items, isMansan]);
+  }, [selectedCompanyId, items]);
 
   // Update item details when item selection changes
   useEffect(() => {
@@ -192,16 +154,7 @@ const EnhancedSaleForm: React.FC = () => {
         setSelectedItem(item);
         
         // Set GST rate based on company and item
-        let itemGstRate = 0;
-        if (isMansan) {
-          // Mansan always has GST
-          itemGstRate = item.gstPercentage || 18;
-        } else if (!isEstimate) {
-          // For other companies, use the item's GST if available
-          itemGstRate = item.type === 'GST' ? (item.gstPercentage || 0) : 0;
-        }
-        // Estimate always has 0 GST
-        
+        let itemGstRate = item.type === 'GST' ? (item.gstPercentage || 0) : 0;
         setGstRate(itemGstRate);
         
         // Set HSN code if available
@@ -238,14 +191,12 @@ const EnhancedSaleForm: React.FC = () => {
         setSelectedItem(null);
         setMrp(0);
         setExclusiveCost(0);
-        setGstRate(isMansan ? 18 : 0);
+        setGstRate(0);
         setGstAmount(0);
         setHsnCode('');
       }
     }
-  }, [selectedItemId, companyFilteredItems, quantity, isMansan, isEstimate]);
-
-  // Add missing handler functions
+  }, [selectedItemId, companyFilteredItems, quantity]);
 
   // Handle MRP change
   const handleMrpChange = (value: number) => {
@@ -275,8 +226,8 @@ const EnhancedSaleForm: React.FC = () => {
     }
 
     // Validate HSN code for Mansan items
-    if (isMansan && !hsnCode) {
-      toast.error('HSN Code is required for Mansan Laal and Sons items');
+    if (!hsnCode) {
+      toast.error('HSN Code is required for items with GST');
       return;
     }
 
@@ -473,8 +424,11 @@ const EnhancedSaleForm: React.FC = () => {
       const hasGst = items.some(item => item.gstPercentage && item.gstPercentage > 0);
       
       const billType = hasGst ? 'GST' : 'NON-GST';
+      const billNumber = `${billType}-${Date.now()}`; // Generate a bill number
+      
       const billData = {
         companyId,
+        billNumber, // Add bill number here
         date: new Date().toISOString(),
         customerName,
         billType,
@@ -708,13 +662,11 @@ const EnhancedSaleForm: React.FC = () => {
             <Select 
               value={gstRate.toString()} 
               onValueChange={(value) => setGstRate(parseInt(value))}
-              disabled={isEstimate} // Disable for Estimate company
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select GST Rate" />
               </SelectTrigger>
               <SelectContent>
-                {!isMansan && <SelectItem value="0">0%</SelectItem>}
                 {GST_RATES.map((rate) => (
                   <SelectItem key={rate} value={rate.toString()}>
                     {rate}%
@@ -749,41 +701,37 @@ const EnhancedSaleForm: React.FC = () => {
         
         {/* HSN Code and Packaging Details */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          {isMansan && (
-            <div>
-              <Label htmlFor="hsnCode">HSN Code *</Label>
-              <Select 
-                value={hsnCode} 
-                onValueChange={setHsnCode}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select HSN Code" />
-                </SelectTrigger>
-                <SelectContent>
-                  {HSN_CODES.map((code) => (
-                    <SelectItem key={code} value={code}>
-                      {code}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-gray-500 mt-1">Required for Mansan Laal and Sons</p>
-            </div>
-          )}
+          <div>
+            <Label htmlFor="hsnCode">HSN Code *</Label>
+            <Select 
+              value={hsnCode} 
+              onValueChange={setHsnCode}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select HSN Code" />
+              </SelectTrigger>
+              <SelectContent>
+                {HSN_CODES.map((code) => (
+                  <SelectItem key={code} value={code}>
+                    {code}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-gray-500 mt-1">Required for items with GST</p>
+          </div>
           
-          {isEstimate && (
-            <div>
-              <Label htmlFor="packagingDetails">Packaging Details</Label>
-              <Input
-                id="packagingDetails"
-                value={packagingDetails}
-                onChange={(e) => setPackagingDetails(e.target.value)}
-                placeholder="Optional details about packaging"
-                maxLength={50} // Limit length to avoid overflow on thermal slip
-              />
-              <p className="text-xs text-gray-500 mt-1">Will appear on 2nd line in Estimate bill</p>
-            </div>
-          )}
+          <div>
+            <Label htmlFor="packagingDetails">Packaging Details</Label>
+            <Input
+              id="packagingDetails"
+              value={packagingDetails}
+              onChange={(e) => setPackagingDetails(e.target.value)}
+              placeholder="Optional details about packaging"
+              maxLength={50} // Limit length to avoid overflow on thermal slip
+            />
+            <p className="text-xs text-gray-500 mt-1">Will appear on 2nd line in Estimate bill</p>
+          </div>
         </div>
         
         {/* Discount and Add Item button */}
@@ -831,7 +779,7 @@ const EnhancedSaleForm: React.FC = () => {
               type="button" 
               onClick={handleAddItem}
               className="w-full"
-              disabled={!selectedCompanyId || !selectedItemId || quantity <= 0 || (isMansan && !hsnCode)}
+              disabled={!selectedCompanyId || !selectedItemId || quantity <= 0}
             >
               <Plus size={16} className="mr-1" /> Add Item
             </Button>
@@ -846,14 +794,14 @@ const EnhancedSaleForm: React.FC = () => {
         )}
         
         {/* Company-specific warnings */}
-        {isMansan && (
+        {currentCompany?.name === 'Mansan Laal and Sons' && (
           <div className="flex items-center p-2 mb-4 text-amber-800 bg-amber-50 rounded border border-amber-200">
             <AlertCircle size={16} className="mr-2" />
             <p className="text-xs">Mansan Laal and Sons requires GST items with HSN codes only.</p>
           </div>
         )}
         
-        {isEstimate && (
+        {currentCompany?.name === 'Estimate' && (
           <div className="flex items-center p-2 mb-4 text-blue-800 bg-blue-50 rounded border border-blue-200">
             <AlertCircle size={16} className="mr-2" />
             <p className="text-xs">Estimate company only accepts Non-GST items.</p>
@@ -1105,7 +1053,6 @@ const EnhancedSaleForm: React.FC = () => {
           onClose={() => setIsPrintModalOpen(false)} 
           sale={createdSale} 
           printType={printType}
-          selectedCompanyId={selectedPrintCompanyId}
         />
       )}
 
