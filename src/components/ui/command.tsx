@@ -88,7 +88,7 @@ const CommandGroup = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.Group>
 >(({ className, ...props }, ref) => {
   // Ensure children exists and is valid before rendering
-  const hasValidChildren = React.Children.count(props.children) > 0;
+  const hasValidChildren = props.children ? React.Children.count(props.children) > 0 : false;
   
   return (
     <CommandPrimitive.Group

@@ -13,7 +13,7 @@ const PopoverContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content>
 >(({ className, align = "center", sideOffset = 4, children, ...props }, ref) => {
   // Check if children exist before rendering
-  const hasChildren = React.Children.count(children) > 0;
+  const hasChildren = children ? React.Children.count(children) > 0 : false;
 
   return (
     <PopoverPrimitive.Portal>
