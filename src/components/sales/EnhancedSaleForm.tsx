@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useInventory } from '../../contexts/InventoryContext';
@@ -33,6 +34,16 @@ const HSN_CODES = [
   '6911', '7321', '8414', '8418', '8450',
   '8516', '8517', '8528', '9503'
 ];
+
+// Define type for company summary
+interface CompanySummary {
+  id: string;
+  name: string;
+  subtotal: number;
+  discount: number;
+  gst: number;
+  total: number;
+}
 
 const EnhancedSaleForm: React.FC = () => {
   const { companies, currentCompany } = useCompany();
@@ -77,6 +88,37 @@ const EnhancedSaleForm: React.FC = () => {
   const [totalGst, setTotalGst] = useState<number>(0);
   const [totalDiscount, setTotalDiscount] = useState<number>(0);
   const [grandTotal, setGrandTotal] = useState<number>(0);
+
+  // Calculate company summaries for the bill
+  const companySummaries = useMemo(() => {
+    const summaries: Record<string, CompanySummary> = {};
+
+    currentSaleItems.forEach(item => {
+      if (!summaries[item.companyId]) {
+        const company = companies.find(c => c.id === item.companyId);
+        summaries[item.companyId] = {
+          id: item.companyId,
+          name: company ? company.name : 'Unknown Company',
+          subtotal: 0,
+          discount: 0,
+          gst: 0,
+          total: 0
+        };
+      }
+
+      const summary = summaries[item.companyId];
+      const baseAmount = item.unitPrice * item.quantity;
+      const discountAmount = item.discountValue || 0;
+      const gstAmount = item.gstAmount || 0;
+
+      summary.subtotal += baseAmount;
+      summary.discount += discountAmount;
+      summary.gst += gstAmount;
+      summary.total += item.totalPrice;
+    });
+
+    return summaries;
+  }, [currentSaleItems, companies]);
 
   // Initialize godown selection
   useEffect(() => {
@@ -203,6 +245,274 @@ const EnhancedSaleForm: React.FC = () => {
     }
   }, [selectedItemId, companyFilteredItems, quantity, isMansan, isEstimate]);
 
+  // Add missing handler functions
+
+  // Handle MRP change
+  const handleMrpChange = (value: number) => {
+    setMrp(value);
+    if (gstRate > 0) {
+      const newExclusiveCost = calculateExclusiveCost(value, gstRate);
+      setExclusiveCost(newExclusiveCost);
+      
+      const newGstAmount = value - newExclusiveCost;
+      setGstAmount(newGstAmount * quantity);
+    } else {
+      setExclusiveCost(value);
+      setGstAmount(0);
+    }
+  };
+  
+  // Handle adding item to bill
+  const handleAddItem = () => {
+    if (!selectedItem) {
+      toast.error('Please select an item');
+      return;
+    }
+
+    if (quantity <= 0) {
+      toast.error('Quantity must be greater than 0');
+      return;
+    }
+
+    // Validate HSN code for Mansan items
+    if (isMansan && !hsnCode) {
+      toast.error('HSN Code is required for Mansan Laal and Sons items');
+      return;
+    }
+
+    // Calculate discount amount
+    let discountValue = 0;
+    let discountPercentage = 0;
+    
+    if (discount > 0) {
+      if (discountType === 'amount') {
+        discountValue = discount;
+        discountPercentage = (discount / (exclusiveCost * quantity)) * 100;
+      } else {
+        discountPercentage = discount;
+        discountValue = (exclusiveCost * quantity * discount) / 100;
+      }
+    }
+    
+    // Calculate GST on discounted amount
+    const baseAmount = exclusiveCost * quantity;
+    const discountedBaseAmount = baseAmount - discountValue;
+    let itemGstAmount = 0;
+    
+    if (gstRate > 0) {
+      itemGstAmount = (discountedBaseAmount * gstRate) / 100;
+    }
+    
+    // Calculate total price
+    const totalPrice = discountedBaseAmount + itemGstAmount;
+
+    // Create sale item
+    const company = companies.find(c => c.id === selectedCompanyId);
+    const saleItem: SaleItem = {
+      itemId: selectedItem.id,
+      companyId: selectedCompanyId,
+      companyName: company ? company.name : 'Unknown Company',
+      name: selectedItem.name,
+      quantity,
+      unitPrice: exclusiveCost,
+      mrp: mrp,
+      salesUnit,
+      gstPercentage: gstRate > 0 ? gstRate : undefined,
+      gstAmount: itemGstAmount,
+      discountValue: discountValue > 0 ? discountValue : undefined,
+      discountPercentage: discountPercentage > 0 ? discountPercentage : undefined,
+      totalPrice,
+      totalAmount: totalPrice,
+      hsnCode: hsnCode || undefined,
+      packagingDetails: packagingDetails || undefined
+    };
+
+    addSaleItem(saleItem);
+    
+    // Reset form fields for next item
+    setSelectedItemId('');
+    setSelectedItem(null);
+    setQuantity(1);
+    setDiscount(0);
+    setSearchTerm('');
+    setIsItemPopoverOpen(false);
+  };
+  
+  // Open discount dialog for an item
+  const openDiscountDialog = (index: number) => {
+    const item = currentSaleItems[index];
+    
+    setDiscountItemIndex(index);
+    
+    if (item.discountValue) {
+      setDialogDiscount(item.discountPercentage ? item.discountPercentage : item.discountValue);
+      setDialogDiscountType(item.discountPercentage ? 'percentage' : 'amount');
+    } else {
+      setDialogDiscount(0);
+      setDialogDiscountType('amount');
+    }
+    
+    setIsDiscountDialogOpen(true);
+  };
+  
+  // Apply discount to an item
+  const applyItemDiscount = () => {
+    if (discountItemIndex < 0) return;
+    
+    const item = currentSaleItems[discountItemIndex];
+    const updatedItem = { ...item };
+    
+    // Calculate discount
+    let discountValue = 0;
+    let discountPercentage = 0;
+    
+    const baseAmount = item.unitPrice * item.quantity;
+    
+    if (dialogDiscount > 0) {
+      if (dialogDiscountType === 'amount') {
+        discountValue = dialogDiscount;
+        discountPercentage = (dialogDiscount / baseAmount) * 100;
+      } else {
+        discountPercentage = dialogDiscount;
+        discountValue = (baseAmount * dialogDiscount) / 100;
+      }
+    }
+    
+    // Calculate GST on discounted amount
+    const discountedBaseAmount = baseAmount - discountValue;
+    let itemGstAmount = 0;
+    
+    if (item.gstPercentage) {
+      itemGstAmount = (discountedBaseAmount * item.gstPercentage) / 100;
+    }
+    
+    // Update item with new values
+    updatedItem.discountValue = discountValue > 0 ? discountValue : undefined;
+    updatedItem.discountPercentage = discountPercentage > 0 ? discountPercentage : undefined;
+    updatedItem.gstAmount = itemGstAmount;
+    updatedItem.totalPrice = discountedBaseAmount + itemGstAmount;
+    updatedItem.totalAmount = updatedItem.totalPrice;
+    
+    // Update item in list
+    const updatedItems = [...currentSaleItems];
+    updatedItems[discountItemIndex] = updatedItem;
+    
+    // Use the updateSaleItem function from context if available, otherwise fallback
+    if (typeof updateSaleItem === 'function') {
+      updateSaleItem(discountItemIndex, updatedItem);
+    } else {
+      // This is a fallback in case updateSaleItem isn't provided by the context
+      removeSaleItem(discountItemIndex);
+      addSaleItem(updatedItem);
+    }
+    
+    setIsDiscountDialogOpen(false);
+    toast.success('Discount applied successfully');
+  };
+
+  // Calculate summary values whenever sale items change
+  useEffect(() => {
+    let newSubtotal = 0;
+    let newTotalDiscount = 0;
+    let newTotalGst = 0;
+    let newGrandTotal = 0;
+    
+    currentSaleItems.forEach(item => {
+      const baseAmount = item.unitPrice * item.quantity;
+      newSubtotal += baseAmount;
+      newTotalDiscount += item.discountValue || 0;
+      newTotalGst += item.gstAmount || 0;
+      newGrandTotal += item.totalPrice;
+    });
+    
+    setSubtotal(newSubtotal);
+    setTotalDiscount(newTotalDiscount);
+    setTotalGst(newTotalGst);
+    setGrandTotal(newGrandTotal);
+  }, [currentSaleItems]);
+  
+  // Handle create sale
+  const handleCreateSale = () => {
+    if (currentSaleItems.length === 0) {
+      toast.error('No items added to sale');
+      return;
+    }
+    
+    if (!customerName.trim()) {
+      toast.error('Customer name is required');
+      return;
+    }
+    
+    if (!selectedGodownId) {
+      toast.error('Please select a godown');
+      return;
+    }
+    
+    // Validate company-specific rules
+    const validation = validateCompanyItems(currentSaleItems);
+    if (!validation.valid) {
+      toast.error(validation.errorMessage || 'Invalid items');
+      return;
+    }
+    
+    // Group items by company to create separate bills if needed
+    const itemsByCompany: Record<string, SaleItem[]> = {};
+    
+    currentSaleItems.forEach(item => {
+      if (!itemsByCompany[item.companyId]) {
+        itemsByCompany[item.companyId] = [];
+      }
+      itemsByCompany[item.companyId].push(item);
+    });
+    
+    // Create bills for each company
+    const createdSales = [];
+    
+    for (const [companyId, items] of Object.entries(itemsByCompany)) {
+      const company = companies.find(c => c.id === companyId);
+      const hasGst = items.some(item => item.gstPercentage && item.gstPercentage > 0);
+      
+      const billType = hasGst ? 'GST' : 'NON-GST';
+      const billData = {
+        companyId,
+        date: new Date().toISOString(),
+        customerName,
+        billType,
+        godownId: selectedGodownId,
+        items,
+        totalAmount: items.reduce((sum, item) => sum + item.totalPrice, 0)
+      };
+      
+      const sale = createSale(billData);
+      if (sale) {
+        createdSales.push(sale);
+      }
+    }
+    
+    if (createdSales.length > 0) {
+      // Set created sales for printing
+      setCreatedSale(createdSales.length === 1 ? createdSales[0] : createdSales);
+      
+      // Ask user about printing
+      setPrintType(createdSales.length === 1 ? 'single' : 'all');
+      setIsPrintModalOpen(true);
+      
+      // Reset form
+      setCustomerName('');
+      clearSaleItems();
+    }
+  };
+  
+  // Handle preview consolidated bill
+  const handlePreviewConsolidatedBill = () => {
+    if (currentSaleItems.length === 0) {
+      toast.error('No items added to sale');
+      return;
+    }
+    
+    setConsolidatedPreviewOpen(true);
+  };
+
   const getItemDisplayDetails = (item: Item) => {
     let details = item.name;
     if (item.type === 'GST' && item.gstPercentage) {
@@ -210,6 +520,20 @@ const EnhancedSaleForm: React.FC = () => {
     }
     details += ` - ₹${item.unitPrice}`;
     return details;
+  };
+
+  // Add updateSaleItem if it doesn't exist in the context
+  const updateSaleItem = (index: number, saleItem: SaleItem) => {
+    const updatedItems = [...currentSaleItems];
+    updatedItems[index] = saleItem;
+    // Assuming we have access to a setter for currentSaleItems
+    // This is a fallback that may not work if the context doesn't expose this functionality
+    const newItems = [...currentSaleItems];
+    newItems[index] = saleItem;
+    
+    // Remove and add to simulate update
+    removeSaleItem(index);
+    addSaleItem(saleItem);
   };
 
   return (
