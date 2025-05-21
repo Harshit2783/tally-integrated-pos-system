@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useInventory } from '../../contexts/InventoryContext';
@@ -48,7 +47,7 @@ interface CompanySummary {
 }
 
 const EnhancedSaleForm: React.FC = () => {
-  const { companies } = useCompany();
+  const { companies, currentCompany } = useCompany();
   const { items, filteredItems, filteredGodowns } = useInventory();
   const { addSaleItem, currentSaleItems, removeSaleItem, createSale, clearSaleItems, validateCompanyItems, updateSaleItem: contextUpdateSaleItem } = useSales();
   const { addCustomer } = useCustomers();
@@ -59,7 +58,6 @@ const EnhancedSaleForm: React.FC = () => {
   const [quantity, setQuantity] = useState<number>(1);
   const [customerName, setCustomerName] = useState<string>('');
   const [selectedGodownId, setSelectedGodownId] = useState<string>('');
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
   const [salesUnit, setSalesUnit] = useState<string>('Piece');
   const [mrp, setMrp] = useState<number>(0);
   const [exclusiveCost, setExclusiveCost] = useState<number>(0);
@@ -70,7 +68,6 @@ const EnhancedSaleForm: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [isItemPopoverOpen, setIsItemPopoverOpen] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [showCustomerForm, setShowCustomerForm] = useState(false);
 
   // Discount dialog state
   const [isDiscountDialogOpen, setIsDiscountDialogOpen] = useState<boolean>(false);
@@ -90,26 +87,11 @@ const EnhancedSaleForm: React.FC = () => {
   const [totalDiscount, setTotalDiscount] = useState<number>(0);
   const [grandTotal, setGrandTotal] = useState<number>(0);
 
-  // Add this near the top of the component, after state declarations:
-  const filteredByCompanyItems = useMemo(() => {
-    if (!items) return [];
-    if (!selectedCompanyId) return items;
-    
-    return items.filter(item => item.companyId === selectedCompanyId);
-  }, [items, selectedCompanyId]);
+  // Add Customer state
+  const [showCustomerForm, setShowCustomerForm] = useState(false);
 
-  // Update filteredSearchItems to use itemsToShow:
-  const filteredSearchItems = useMemo(() => {
-    if (!searchTerm || !filteredByCompanyItems) {
-      return filteredByCompanyItems || [];
-    }
-    const lowerSearchTerm = searchTerm.toLowerCase();
-    return filteredByCompanyItems.filter(item =>
-      (item.name && item.name.toLowerCase().includes(lowerSearchTerm)) ||
-      (item.itemId && item.itemId.toLowerCase().includes(lowerSearchTerm)) ||
-      (item.hsnCode && item.hsnCode.toLowerCase().includes(lowerSearchTerm))
-    );
-  }, [searchTerm, filteredByCompanyItems]);
+  // Add this near the top of the component, after state declarations:
+  const itemsToShow = items;
 
   // Restore hsnCode and packagingDetails state
   const [hsnCode, setHsnCode] = useState<string>('');
@@ -150,6 +132,19 @@ const EnhancedSaleForm: React.FC = () => {
     return summaries;
   }, [currentSaleItems, companies]);
 
+  // Update filteredSearchItems to use itemsToShow:
+  const filteredSearchItems = useMemo(() => {
+    if (!searchTerm || !itemsToShow || itemsToShow.length === 0) {
+      return itemsToShow || [];
+    }
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    return itemsToShow.filter(item =>
+      (item.name && item.name.toLowerCase().includes(lowerSearchTerm)) ||
+      (item.itemId && item.itemId.toLowerCase().includes(lowerSearchTerm)) ||
+      (item.hsnCode && item.hsnCode.toLowerCase().includes(lowerSearchTerm))
+    );
+  }, [searchTerm, itemsToShow]);
+
   // Set loading state
   useEffect(() => {
     const hasCompanies = companies && companies.length > 0;
@@ -157,12 +152,7 @@ const EnhancedSaleForm: React.FC = () => {
     const hasGodowns = filteredGodowns && filteredGodowns.length > 0;
     
     setIsLoading(!(hasCompanies && hasItems && hasGodowns));
-    
-    // Set default company if none is selected and companies are available
-    if (companies?.length && !selectedCompanyId) {
-      setSelectedCompanyId(companies[0].id);
-    }
-  }, [companies, items, filteredGodowns, selectedCompanyId]);
+  }, [companies, items, filteredGodowns]);
 
   // Initialize godown selection
   useEffect(() => {
@@ -173,8 +163,8 @@ const EnhancedSaleForm: React.FC = () => {
 
   // Update item details when item selection changes
   useEffect(() => {
-    if (selectedItemId && filteredByCompanyItems && filteredByCompanyItems.length > 0) {
-      const item = filteredByCompanyItems.find((item) => item.id === selectedItemId);
+    if (selectedItemId && itemsToShow && itemsToShow.length > 0) {
+      const item = itemsToShow.find((item) => item.id === selectedItemId);
       if (item) {
         setSelectedItem(item);
         // Set GST rate based on company and item
@@ -216,7 +206,7 @@ const EnhancedSaleForm: React.FC = () => {
       setGstAmount(0);
       setHsnCode('');
     }
-  }, [selectedItemId, filteredByCompanyItems, quantity]);
+  }, [selectedItemId, itemsToShow, quantity]);
 
   // Handle MRP change
   const handleMrpChange = (value: number) => {
@@ -237,11 +227,6 @@ const EnhancedSaleForm: React.FC = () => {
   const handleAddItem = () => {
     if (!selectedItem) {
       toast.error('Please select an item');
-      return;
-    }
-
-    if (!selectedCompanyId) {
-      toast.error('Please select a company');
       return;
     }
 
@@ -283,10 +268,10 @@ const EnhancedSaleForm: React.FC = () => {
     const totalPrice = discountedBaseAmount + itemGstAmount;
 
     // Create sale item
-    const company = companies?.find(c => c.id === selectedCompanyId);
+    const company = companies?.find(c => c.id === selectedGodownId);
     const saleItem: SaleItem = {
       itemId: selectedItem.id,
-      companyId: selectedCompanyId,
+      companyId: selectedGodownId,
       companyName: company ? company.name : 'Unknown Company',
       name: selectedItem.name,
       quantity,
@@ -552,7 +537,7 @@ const EnhancedSaleForm: React.FC = () => {
   // Update the item selection handler to be robust
   const handleSelectItem = (itemId: string) => {
     setSelectedItemId(itemId);
-    const item = filteredByCompanyItems.find(i => i.id === itemId);
+    const item = itemsToShow.find(i => i.id === itemId);
     setSelectedItem(item || null);
   };
 
@@ -567,41 +552,21 @@ const EnhancedSaleForm: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Customer and Company Info */}
+      {/* Customer and Godown Info */}
       <Card className="p-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-          <div className="space-y-2">
-            <Label htmlFor="customerName">Customer Name *</Label>
-            <Input
-              id="customerName"
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-              placeholder="Enter customer name"
-              required
-              disabled={showCustomerForm}
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="companySelect">Company *</Label>
-            <Select
-              value={selectedCompanyId}
-              onValueChange={setSelectedCompanyId}
-            >
-              <SelectTrigger id="companySelect">
-                <SelectValue placeholder="Select company" />
-              </SelectTrigger>
-              <SelectContent>
-                {companies?.map((company) => (
-                  <SelectItem key={company.id} value={company.id}>
-                    {company.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="flex items-end">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+          <div className="space-y-2 flex items-end">
+            <div className="flex-1">
+              <Label htmlFor="customerName">Customer Name *</Label>
+              <Input
+                id="customerName"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                placeholder="Enter customer name"
+                required
+                disabled={showCustomerForm}
+              />
+            </div>
             <Button
               type="button"
               className="ml-2 mb-1"
@@ -620,7 +585,7 @@ const EnhancedSaleForm: React.FC = () => {
                 const { id, createdAt, ...customerData } = newCustomer;
                 addCustomer({
                   ...customerData,
-                  companyId: selectedCompanyId || '',
+                  companyId: currentCompany?.id || customerData.companyId || '',
                 });
                 setCustomerName(newCustomer.name);
                 setShowCustomerForm(false);
@@ -667,9 +632,7 @@ const EnhancedSaleForm: React.FC = () => {
                     />
                     <div className="max-h-[300px] overflow-auto">
                       {filteredSearchItems.length === 0 ? (
-                        <div className="p-2 text-sm text-gray-500">
-                          {selectedCompanyId ? "No items found for selected company." : "Please select a company first."}
-                        </div>
+                        <div className="p-2 text-sm text-gray-500">No items found.</div>
                       ) : (
                         filteredSearchItems.map((item) => (
                           <button
@@ -892,7 +855,7 @@ const EnhancedSaleForm: React.FC = () => {
                 type="button" 
                 onClick={handleAddItem}
                 className="w-full"
-                disabled={!selectedItemId || quantity <= 0 || !selectedCompanyId}
+                disabled={!selectedItemId || quantity <= 0}
               >
                 <Plus size={16} className="mr-1" /> Add Item
               </Button>
@@ -907,14 +870,14 @@ const EnhancedSaleForm: React.FC = () => {
           )}
           
           {/* Company-specific warnings */}
-          {companies && selectedCompanyId && companies.find(c => c.id === selectedCompanyId)?.name === 'Mansan Laal and Sons' && (
+          {currentCompany?.name === 'Mansan Laal and Sons' && (
             <div className="flex items-center p-2 mb-4 text-amber-800 bg-amber-50 rounded border border-amber-200">
               <AlertCircle size={16} className="mr-2" />
               <p className="text-xs">Mansan Laal and Sons requires GST items with HSN codes only.</p>
             </div>
           )}
           
-          {companies && selectedCompanyId && companies.find(c => c.id === selectedCompanyId)?.name === 'Estimate' && (
+          {currentCompany?.name === 'Estimate' && (
             <div className="flex items-center p-2 mb-4 text-blue-800 bg-blue-50 rounded border border-blue-200">
               <AlertCircle size={16} className="mr-2" />
               <p className="text-xs">Estimate company only accepts Non-GST items.</p>
