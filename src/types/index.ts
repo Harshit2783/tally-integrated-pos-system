@@ -1,4 +1,3 @@
-
 export interface Company {
   id: string;
   name: string;
@@ -85,6 +84,7 @@ export interface Sale {
   totalExclusiveCost?: number;
   totalGst?: number;
   items: SaleItem[];
+  createdBy: string;
   createdAt: string;
 }
 

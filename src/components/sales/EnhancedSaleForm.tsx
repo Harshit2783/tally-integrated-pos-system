@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { CheckIcon, ChevronDown } from 'lucide-react';
 import CustomerForm from '../customers/CustomerForm';
 import { useCustomers } from '../../contexts/CustomersContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 // Define sales units
 const SALES_UNITS = ['Case', 'Packet', 'Piece'];
@@ -47,10 +48,11 @@ interface CompanySummary {
 }
 
 const EnhancedSaleForm: React.FC = () => {
-  const { companies, currentCompany } = useCompany();
+  const { companies, currentCompany, setCurrentCompany } = useCompany();
   const { items, filteredItems, filteredGodowns } = useInventory();
   const { addSaleItem, currentSaleItems, removeSaleItem, createSale, clearSaleItems, validateCompanyItems, updateSaleItem: contextUpdateSaleItem } = useSales();
   const { addCustomer } = useCustomers();
+  const { currentUser } = useAuth();
 
   // Form state
   const [selectedItemId, setSelectedItemId] = useState<string>('');
@@ -96,6 +98,17 @@ const EnhancedSaleForm: React.FC = () => {
   // Restore hsnCode and packagingDetails state
   const [hsnCode, setHsnCode] = useState<string>('');
   const [packagingDetails, setPackagingDetails] = useState<string>('');
+
+  // Add state for customer suggestions popover
+  const [isCustomerPopoverOpen, setIsCustomerPopoverOpen] = useState(false);
+  const { customers } = useCustomers();
+
+  // Filter customers based on input
+  const filteredCustomerSuggestions = useMemo(() => {
+    if (!customerName.trim()) return [];
+    const lower = customerName.toLowerCase();
+    return customers.filter(c => c.name.toLowerCase().includes(lower));
+  }, [customerName, customers]);
 
   // Calculate company summaries for the bill
   const companySummaries = useMemo(() => {
@@ -229,22 +242,16 @@ const EnhancedSaleForm: React.FC = () => {
       toast.error('Please select an item');
       return;
     }
-
     if (quantity <= 0) {
       toast.error('Quantity must be greater than 0');
       return;
     }
-
-    // Validate HSN code for Mansan items
     if (!hsnCode) {
       toast.error('HSN Code is required for items with GST');
       return;
     }
-
-    // Calculate discount amount
     let discountValue = 0;
     let discountPercentage = 0;
-    
     if (discount > 0) {
       if (discountType === 'amount') {
         discountValue = discount;
@@ -254,25 +261,18 @@ const EnhancedSaleForm: React.FC = () => {
         discountValue = (exclusiveCost * quantity * discount) / 100;
       }
     }
-    
-    // Calculate GST on discounted amount
     const baseAmount = exclusiveCost * quantity;
     const discountedBaseAmount = baseAmount - discountValue;
     let itemGstAmount = 0;
-    
     if (gstRate > 0) {
       itemGstAmount = (discountedBaseAmount * gstRate) / 100;
     }
-    
-    // Calculate total price
     const totalPrice = discountedBaseAmount + itemGstAmount;
-
-    // Create sale item
-    const company = companies?.find(c => c.id === selectedGodownId);
+    const itemCompany = companies?.find(c => c.id === selectedItem.companyId);
     const saleItem: SaleItem = {
       itemId: selectedItem.id,
-      companyId: selectedGodownId,
-      companyName: company ? company.name : 'Unknown Company',
+      companyId: selectedItem.companyId,
+      companyName: itemCompany ? itemCompany.name : 'Unknown Company',
       name: selectedItem.name,
       quantity,
       unitPrice: exclusiveCost,
@@ -287,11 +287,8 @@ const EnhancedSaleForm: React.FC = () => {
       hsnCode: hsnCode || undefined,
       packagingDetails: packagingDetails || undefined
     };
-
     try {
       addSaleItem(saleItem);
-      
-      // Reset form fields for next item
       setSelectedItemId('');
       setSelectedItem(null);
       setQuantity(1);
@@ -465,7 +462,8 @@ const EnhancedSaleForm: React.FC = () => {
           billType,
           godownId: selectedGodownId,
           items,
-          totalAmount: items.reduce((sum, item) => sum + item.totalPrice, 0)
+          totalAmount: items.reduce((sum, item) => sum + item.totalPrice, 0),
+          createdBy: currentUser?.name || 'Unknown',
         };
         
         const sale = createSale(billData);
@@ -539,7 +537,17 @@ const EnhancedSaleForm: React.FC = () => {
     setSelectedItemId(itemId);
     const item = itemsToShow.find(i => i.id === itemId);
     setSelectedItem(item || null);
+    if (item) {
+      // Auto-select the company for the selected item
+      const company = companies.find(c => c.id === item.companyId);
+      if (company) {
+        setCurrentCompany(company);
+      }
+    }
   };
+
+  // Remove popover/ref/focus logic for customer name input
+  const [customerNameInputFocused, setCustomerNameInputFocused] = useState(false);
 
   // Loading state
   if (isLoading) {
@@ -558,14 +566,38 @@ const EnhancedSaleForm: React.FC = () => {
           <div className="space-y-2 flex items-end">
             <div className="flex-1">
               <Label htmlFor="customerName">Customer Name *</Label>
-              <Input
-                id="customerName"
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="Enter customer name"
-                required
-                disabled={showCustomerForm}
-              />
+              <div className="relative">
+                <Input
+                  id="customerName"
+                  value={customerName}
+                  onChange={e => setCustomerName(e.target.value)}
+                  placeholder="Enter customer name"
+                  required
+                  disabled={showCustomerForm}
+                  autoComplete="off"
+                  onFocus={() => setCustomerNameInputFocused(true)}
+                  onBlur={() => setTimeout(() => setCustomerNameInputFocused(false), 100)}
+                />
+                {customerNameInputFocused && customerName && filteredCustomerSuggestions.length > 0 && (
+                  <div className="absolute z-10 left-0 right-0 bg-white border border-gray-200 rounded shadow max-h-60 overflow-auto">
+                    {filteredCustomerSuggestions.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        className="w-full text-left px-3 py-2 hover:bg-gray-100"
+                        onMouseDown={e => {
+                          e.preventDefault();
+                          setCustomerName(c.name);
+                          setCustomerNameInputFocused(false);
+                        }}
+                      >
+                        <div className="font-medium">{c.name}</div>
+                        <div className="text-xs text-gray-500">{c.phone} {c.email && `| ${c.email}`}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             <Button
               type="button"
@@ -642,8 +674,7 @@ const EnhancedSaleForm: React.FC = () => {
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              setSelectedItem(item);
-                              setSelectedItemId(item.id);
+                              handleSelectItem(item.id);
                               setIsItemPopoverOpen(false);
                               setSearchTerm('');
                             }}
