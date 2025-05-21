@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useSales } from '../../contexts/SalesContext';
 import { Sale } from '../../types';
@@ -15,7 +14,7 @@ import { PrintBillModal } from './PrintBillModal';
 const SalesList: React.FC = () => {
   const { filteredSales } = useSales();
   const { filteredGodowns } = useInventory();
-  const { currentCompany } = useCompany();
+  const { companies } = useCompany();
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [printType, setPrintType] = useState<'single' | 'all'>('single');
@@ -45,13 +44,16 @@ const SalesList: React.FC = () => {
   };
 
   const handlePushToTally = async (sale: Sale) => {
-    if (!currentCompany) {
-      toast.error('No company selected');
+    // Get the company associated with this sale
+    const saleCompany = companies?.find(c => c.id === sale.companyId);
+    
+    if (!saleCompany) {
+      toast.error('Company not found for this sale');
       return;
     }
     
     try {
-      const xml = generateTallyXML(sale, currentCompany);
+      const xml = generateTallyXML(sale, saleCompany);
       const result = await pushToTally(xml);
       
       if (result) {
