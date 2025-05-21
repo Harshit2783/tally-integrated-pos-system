@@ -35,12 +35,14 @@ const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
 
 export const CompanyProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [currentCompany, setCurrentCompany] = useState<Company | null>(null);
 
   // Initialize with default companies if none exist
   useEffect(() => {
     // Check if we already have companies from mockData or previous sessions
     if (mockCompanies.length > 0) {
       setCompanies(mockCompanies);
+      setCurrentCompany(null); // Set to null initially to show all companies in dashboard
     } else {
       // If no companies exist, add our default companies
       const initializedCompanies: Company[] = DEFAULT_COMPANIES.map(company => ({
@@ -50,6 +52,9 @@ export const CompanyProvider: React.FC<{ children: ReactNode }> = ({ children })
       }));
       
       setCompanies(initializedCompanies);
+      
+      // Set to null initially to show all companies in dashboard
+      setCurrentCompany(null);
     }
   }, []);
 
@@ -71,11 +76,22 @@ export const CompanyProvider: React.FC<{ children: ReactNode }> = ({ children })
       )
     );
     
+    // Update current company if it's the one being updated
+    if (currentCompany && currentCompany.id === updatedCompany.id) {
+      setCurrentCompany(updatedCompany);
+    }
+    
     toast.success('Company updated successfully');
   };
 
   const deleteCompany = (id: string) => {
     setCompanies((prev) => prev.filter((company) => company.id !== id));
+    
+    // Reset current company if it's the one being deleted
+    if (currentCompany && currentCompany.id === id) {
+      setCurrentCompany(null);
+    }
+    
     toast.success('Company deleted successfully');
   };
 
@@ -83,6 +99,8 @@ export const CompanyProvider: React.FC<{ children: ReactNode }> = ({ children })
     <CompanyContext.Provider
       value={{
         companies,
+        currentCompany,
+        setCurrentCompany,
         addCompany,
         updateCompany,
         deleteCompany,

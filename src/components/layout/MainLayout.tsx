@@ -7,6 +7,7 @@
 
 import React, { useState } from 'react';
 import { Link, useLocation, Navigate } from 'react-router-dom';
+import { useCompany } from '../../contexts/CompanyContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { 
   Home, 
@@ -39,6 +40,7 @@ interface MainLayoutProps {
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const location = useLocation();
+  const { currentCompany } = useCompany();
   const { currentUser, isAuthenticated, logout } = useAuth();
 
   const toggleSidebar = () => {
@@ -80,6 +82,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             >
               <X size={20} />
             </button>
+          </div>
+
+          {/* Company Selection */}
+          <div className="p-4 border-b border-blue-900">
+            <div className="text-sm text-blue-200">Current Company</div>
+            <div className="font-medium text-lg truncate">
+              {currentCompany ? currentCompany.name : 'Select a company'}
+            </div>
           </div>
 
           {/* Navigation */}
@@ -135,6 +145,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               </h1>
             </div>
             <div className="flex items-center space-x-4">
+              {currentCompany && (
+                <span className="text-sm text-gray-600 hidden md:inline">
+                  {currentCompany.name}
+                </span>
+              )}
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="flex items-center space-x-2">

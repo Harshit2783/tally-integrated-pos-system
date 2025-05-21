@@ -1,13 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
-import { Godown, Company } from '../../types';
+import { Godown } from '../../types';
 import { useCompany } from '../../contexts/CompanyContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface GodownFormProps {
   godown?: Godown;
@@ -20,11 +19,10 @@ const GodownForm: React.FC<GodownFormProps> = ({
   onSubmit,
   onCancel,
 }) => {
-  const { companies } = useCompany();
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
+  const { currentCompany } = useCompany();
 
   const [formData, setFormData] = useState<Omit<Godown, 'id' | 'createdAt'>>({
-    companyId: '',
+    companyId: currentCompany?.id || '',
     name: '',
     address: '',
     contactPerson: '',
@@ -36,15 +34,17 @@ const GodownForm: React.FC<GodownFormProps> = ({
     if (godown) {
       const { id, createdAt, ...rest } = godown;
       setFormData(rest);
-      setSelectedCompanyId(rest.companyId);
-    } else if (companies.length > 0) {
-      setSelectedCompanyId(companies[0].id);
-      setFormData(prev => ({
-        ...prev,
-        companyId: companies[0].id
-      }));
+    } else if (currentCompany) {
+      setFormData({
+        companyId: currentCompany.id,
+        name: '',
+        address: '',
+        contactPerson: '',
+        phone: '',
+        email: '',
+      });
     }
-  }, [godown, companies]);
+  }, [godown, currentCompany]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -56,23 +56,17 @@ const GodownForm: React.FC<GodownFormProps> = ({
     }));
   };
 
-  const handleCompanyChange = (value: string) => {
-    setSelectedCompanyId(value);
-    setFormData(prev => ({
-      ...prev,
-      companyId: value
-    }));
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();    
+    e.preventDefault();
+    if (!currentCompany) return;
+    
     onSubmit(formData);
   };
 
-  if (companies.length === 0) {
+  if (!currentCompany) {
     return (
       <div className="text-center p-4">
-        <p className="text-red-500">Please add a company first</p>
+        <p className="text-red-500">Please select a company first</p>
       </div>
     );
   }
@@ -84,25 +78,6 @@ const GodownForm: React.FC<GodownFormProps> = ({
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="companyId">Company *</Label>
-            <Select 
-              value={selectedCompanyId} 
-              onValueChange={handleCompanyChange}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a company" />
-              </SelectTrigger>
-              <SelectContent>
-                {companies.map((company) => (
-                  <SelectItem key={company.id} value={company.id}>
-                    {company.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="space-y-2">
             <Label htmlFor="name">Godown Name *</Label>
             <Input

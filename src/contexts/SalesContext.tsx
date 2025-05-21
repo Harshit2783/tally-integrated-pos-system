@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Sale, SaleItem } from '../types';
 import { sales as mockSales, generateId, generateBillNumber } from '../data/mockData';
+import { useCompany } from './CompanyContext';
 import { useInventory } from './InventoryContext';
 import { toast } from 'sonner';
 
@@ -30,18 +31,25 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [nonGstSales, setNonGstSales] = useState<Sale[]>([]);
   const [currentSaleItems, setCurrentSaleItems] = useState<SaleItem[]>([]);
   
-  const { updateStock } = useInventory();
+  const { currentCompany, companies } = useCompany();
+  const { updateStock, items } = useInventory();
 
-  // Update filtered sales - no longer dependent on currentCompany
+  // Filter sales based on current company
   useEffect(() => {
     if (!sales) return;
     
-    // Show all sales, we're no longer filtering by company
-    setFilteredSales(sales);
-    setGstSales(sales.filter(sale => sale.billType === 'GST'));
-    setNonGstSales(sales.filter(sale => sale.billType === 'NON-GST'));
-    
-  }, [sales]);
+    if (currentCompany) {
+      const companySales = sales.filter(sale => sale.companyId === currentCompany.id);
+      setFilteredSales(companySales);
+      setGstSales(companySales.filter(sale => sale.billType === 'GST'));
+      setNonGstSales(companySales.filter(sale => sale.billType === 'NON-GST'));
+    } else {
+      // If no company is selected, show all sales
+      setFilteredSales(sales);
+      setGstSales(sales.filter(sale => sale.billType === 'GST'));
+      setNonGstSales(sales.filter(sale => sale.billType === 'NON-GST'));
+    }
+  }, [currentCompany, sales]);
 
   const addSaleItem = (saleItem: SaleItem) => {
     try {
@@ -62,7 +70,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         return;
       }
       
-      // Check if item already exists in current sale items with the same company and itemId
+      // Check if item already exists in current sale items with the same company
       const existingItemIndex = currentSaleItems.findIndex(
         item => item.itemId === saleItem.itemId && item.companyId === saleItem.companyId
       );
@@ -183,8 +191,11 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       
       // Check each company's items
       for (const [companyId, companyItems] of Object.entries(itemsByCompany)) {
+        const company = companies?.find(c => c.id === companyId);
+        if (!company) continue;
+        
         // Special validation for Mansan Laal
-        if (companyItems[0].companyName === 'Mansan Laal and Sons') {
+        if (company.name === 'Mansan Laal and Sons') {
           // All items must be GST items
           const nonGstItems = companyItems.filter(item => !item.gstPercentage);
           if (nonGstItems.length > 0) {
@@ -205,7 +216,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         }
         
         // Special validation for Estimate
-        if (companyItems[0].companyName === 'Estimate') {
+        if (company.name === 'Estimate') {
           // All items must be Non-GST items
           const gstItems = companyItems.filter(item => item.gstPercentage && item.gstPercentage > 0);
           if (gstItems.length > 0) {
@@ -216,7 +227,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           }
         }
         
-        // General validation - no mixing of GST and Non-GST items within a company
+        // General validation - no mixing of GST and Non-GST items
         const hasGst = companyItems.some(item => item.gstPercentage && item.gstPercentage > 0);
         const allHaveGst = companyItems.every(item => item.gstPercentage && item.gstPercentage > 0);
         const noneHaveGst = companyItems.every(item => !item.gstPercentage || item.gstPercentage === 0);
@@ -224,7 +235,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         if (hasGst && !allHaveGst && !noneHaveGst) {
           return {
             valid: false,
-            errorMessage: `${companyItems[0].companyName} cannot have mixed GST/Non-GST items`
+            errorMessage: `${company.name} cannot have mixed GST/Non-GST items`
           };
         }
         

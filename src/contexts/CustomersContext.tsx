@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Customer } from '../types';
 import { generateId } from '../data/mockData';
+import { useCompany } from './CompanyContext';
 import { toast } from 'sonner';
 
 // Mock customer data
@@ -51,7 +52,18 @@ const CustomersContext = createContext<CustomersContextType | undefined>(undefin
 
 export const CustomersProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [customers, setCustomers] = useState<Customer[]>(mockCustomers);
-  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>(mockCustomers);
+  const { currentCompany } = useCompany();
+  
+  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
+
+  // Filter customers based on current company
+  useEffect(() => {
+    if (currentCompany) {
+      setFilteredCustomers(customers.filter(customer => customer.companyId === currentCompany.id));
+    } else {
+      setFilteredCustomers([]);
+    }
+  }, [currentCompany, customers]);
 
   const addCustomer = (customerData: Omit<Customer, 'id' | 'createdAt'>) => {
     const newCustomer: Customer = {

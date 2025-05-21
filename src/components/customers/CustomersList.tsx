@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useCustomers } from '../../contexts/CustomersContext';
 import { Customer } from '../../types';
@@ -6,16 +5,19 @@ import { Edit, Trash2, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { useCompany } from '../../contexts/CompanyContext';
 
 interface CustomersListProps {
   onEdit: (customer: Customer) => void;
 }
 
 const CustomersList: React.FC<CustomersListProps> = ({ onEdit }) => {
-  const { customers, deleteCustomer } = useCustomers();
+  const { currentCompany } = useCompany();
+  const { filteredCustomers, deleteCustomer, customers } = useCustomers();
   const [search, setSearch] = useState('');
 
-  const filteredResults = customers.filter((customer) => {
+  const customersToShow = currentCompany ? filteredCustomers : customers;
+  const filteredResults = customersToShow.filter((customer) => {
     return customer.name.toLowerCase().includes(search.toLowerCase()) ||
       customer.phone.includes(search) ||
       customer.email.toLowerCase().includes(search.toLowerCase());
@@ -27,7 +29,7 @@ const CustomersList: React.FC<CustomersListProps> = ({ onEdit }) => {
     }
   };
 
-  if (customers.length === 0) {
+  if (customersToShow.length === 0) {
     return (
       <Card className="p-6 text-center">
         <p className="text-gray-500">No customers found. Please add customers to get started.</p>

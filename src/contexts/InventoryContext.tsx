@@ -2,12 +2,13 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Item, Godown } from '../types';
 import { items as mockItems, godowns as mockGodowns, generateId } from '../data/mockData';
+import { useCompany } from './CompanyContext';
 import { toast } from 'sonner';
 
 interface InventoryContextType {
   items: Item[];
-  filteredItems: Item[]; // Added missing filteredItems property
   godowns: Godown[];
+  filteredItems: Item[];
   filteredGodowns: Godown[];
   addItem: (item: Omit<Item, 'id' | 'createdAt'>) => void;
   updateItem: (item: Item) => void;
@@ -25,19 +26,23 @@ const InventoryContext = createContext<InventoryContextType | undefined>(undefin
 
 export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<Item[]>(mockItems);
-  const [filteredItems, setFilteredItems] = useState<Item[]>([]); // Added filteredItems state
   const [godowns, setGodowns] = useState<Godown[]>(mockGodowns);
-  const [filteredGodowns, setFilteredGodowns] = useState<Godown[]>([]);
+  const { currentCompany } = useCompany();
   
-  // Initialize filteredItems with all items initially
-  useEffect(() => {
-    setFilteredItems(items);
-  }, [items]);
+  const [filteredItems, setFilteredItems] = useState<Item[]>([]);
+  const [filteredGodowns, setFilteredGodowns] = useState<Godown[]>([]);
 
-  // Set all godowns as available initially
+  // Filter items and godowns based on current company
   useEffect(() => {
-    setFilteredGodowns(godowns);
-  }, [godowns]);
+    if (currentCompany) {
+      setFilteredItems(items.filter(item => item.companyId === currentCompany.id));
+      setFilteredGodowns(godowns.filter(godown => godown.companyId === currentCompany.id));
+    } else {
+      // If no company is selected, show all items
+      setFilteredItems(items);
+      setFilteredGodowns(godowns);
+    }
+  }, [currentCompany, items, godowns]);
 
   const getItemsByCompany = (companyId: string): Item[] => {
     return items.filter(item => item.companyId === companyId);
@@ -206,8 +211,8 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
     <InventoryContext.Provider
       value={{
         items,
-        filteredItems, // Add filteredItems to context value
         godowns,
+        filteredItems,
         filteredGodowns,
         addItem,
         updateItem,

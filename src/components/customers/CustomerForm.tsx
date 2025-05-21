@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Customer, Company } from '../../types';
+import { Customer } from '../../types';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useCustomers } from '../../contexts/CustomersContext';
 import { Button } from '@/components/ui/button';
@@ -8,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface CustomerFormProps {
   customer?: Customer;
@@ -17,12 +15,11 @@ interface CustomerFormProps {
 }
 
 const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, onCancel }) => {
-  const { companies } = useCompany();
+  const { currentCompany } = useCompany();
   const { addCustomer, updateCustomer } = useCustomers();
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
 
   const [formData, setFormData] = useState<Omit<Customer, 'id' | 'createdAt'>>({
-    companyId: '',
+    companyId: currentCompany?.id || '',
     name: '',
     phone: '',
     email: '',
@@ -34,15 +31,17 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, onCance
     if (customer) {
       const { id, createdAt, ...rest } = customer;
       setFormData(rest);
-      setSelectedCompanyId(rest.companyId);
-    } else if (companies.length > 0) {
-      setSelectedCompanyId(companies[0].id);
-      setFormData(prev => ({
-        ...prev,
-        companyId: companies[0].id
-      }));
+    } else {
+      setFormData({
+        companyId: currentCompany?.id || '',
+        name: '',
+        phone: '',
+        email: '',
+        gstNumber: '',
+        address: '',
+      });
     }
-  }, [customer, companies]);
+  }, [customer, currentCompany]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -52,20 +51,12 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, onCance
     }));
   };
 
-  const handleCompanyChange = (value: string) => {
-    setSelectedCompanyId(value);
-    setFormData(prev => ({
-      ...prev,
-      companyId: value
-    }));
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (customer) {
       updateCustomer({ ...customer, ...formData });
     } else {
-      addCustomer({ ...formData });
+      addCustomer({ ...formData, companyId: formData.companyId || '' });
     }
     onSubmit({ ...formData, id: customer?.id || '', createdAt: customer?.createdAt || new Date().toISOString() });
   };
@@ -81,25 +72,6 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, onCance
         }
       }}>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="companyId">Company *</Label>
-            <Select 
-              value={selectedCompanyId} 
-              onValueChange={handleCompanyChange}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a company" />
-              </SelectTrigger>
-              <SelectContent>
-                {companies.map((company) => (
-                  <SelectItem key={company.id} value={company.id}>
-                    {company.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name">Customer Name *</Label>
