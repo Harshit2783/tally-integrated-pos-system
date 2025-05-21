@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Customer } from '../../types';
 import { useCompany } from '../../contexts/CompanyContext';
@@ -54,31 +53,24 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ customer, onSubmit, onCance
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentCompany) return;
-    
     if (customer) {
       updateCustomer({ ...customer, ...formData });
     } else {
-      addCustomer(formData);
+      addCustomer({ ...formData, companyId: formData.companyId || '' });
     }
-    
     onSubmit({ ...formData, id: customer?.id || '', createdAt: customer?.createdAt || new Date().toISOString() });
   };
-
-  if (!currentCompany) {
-    return (
-      <div className="text-center p-4">
-        <p className="text-red-500">Please select a company first</p>
-      </div>
-    );
-  }
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>{customer ? 'Edit Customer' : 'Add New Customer'}</CardTitle>
       </CardHeader>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} onKeyDown={e => {
+        if (e.key === 'Enter' && e.target instanceof HTMLInputElement && e.target.type !== 'submit') {
+          e.preventDefault();
+        }
+      }}>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
