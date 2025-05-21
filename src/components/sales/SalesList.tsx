@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useSales } from '../../contexts/SalesContext';
 import { Sale } from '../../types';
@@ -138,6 +137,10 @@ const SalesList: React.FC = () => {
                   <p className="text-gray-800">
                     {sale.items.length} {sale.items.length === 1 ? 'item' : 'items'} in total
                   </p>
+                </div>
+                
+                <div className="mt-2">
+                  <span className="text-xs text-gray-500">Bill made by {sale.createdBy}</span>
                 </div>
                 
                 <div className="flex flex-wrap gap-2 mt-4">
