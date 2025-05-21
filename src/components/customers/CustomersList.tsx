@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useCustomers } from '../../contexts/CustomersContext';
 import { Customer } from '../../types';
@@ -14,10 +13,11 @@ interface CustomersListProps {
 
 const CustomersList: React.FC<CustomersListProps> = ({ onEdit }) => {
   const { currentCompany } = useCompany();
-  const { filteredCustomers, deleteCustomer } = useCustomers();
+  const { filteredCustomers, deleteCustomer, customers } = useCustomers();
   const [search, setSearch] = useState('');
 
-  const filteredResults = filteredCustomers.filter((customer) => {
+  const customersToShow = currentCompany ? filteredCustomers : customers;
+  const filteredResults = customersToShow.filter((customer) => {
     return customer.name.toLowerCase().includes(search.toLowerCase()) ||
       customer.phone.includes(search) ||
       customer.email.toLowerCase().includes(search.toLowerCase());
@@ -29,15 +29,7 @@ const CustomersList: React.FC<CustomersListProps> = ({ onEdit }) => {
     }
   };
 
-  if (!currentCompany) {
-    return (
-      <Card className="p-6 text-center">
-        <p className="text-gray-500">Please select a company to view customers</p>
-      </Card>
-    );
-  }
-
-  if (filteredCustomers.length === 0) {
+  if (customersToShow.length === 0) {
     return (
       <Card className="p-6 text-center">
         <p className="text-gray-500">No customers found. Please add customers to get started.</p>

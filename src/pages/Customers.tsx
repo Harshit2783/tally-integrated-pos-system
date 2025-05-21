@@ -1,4 +1,3 @@
-
 /**
  * Customers Page
  * Manages customer information with functionality to view, add, edit,
@@ -43,7 +42,7 @@ const Customers = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-3xl font-bold tracking-tight">Customers</h2>
-          <Button onClick={handleAddCustomer} disabled={isAddingCustomer || !!editingCustomer}>
+          <Button onClick={handleAddCustomer}>
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Customer
           </Button>

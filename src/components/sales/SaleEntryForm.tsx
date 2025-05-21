@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useInventory } from '../../contexts/InventoryContext';
 import { useSales } from '../../contexts/SalesContext';
 import { Item, SaleItem, Godown } from '../../types';
-import { Card } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -209,7 +208,7 @@ const SaleEntryForm: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Customer and Godown Info */}
+      {/* Customer Info Only (remove Godown from here) */}
       <Card className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -221,25 +220,6 @@ const SaleEntryForm: React.FC = () => {
               placeholder="Enter customer name"
               required
             />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="godown">Godown *</Label>
-            <Select 
-              value={selectedGodownId} 
-              onValueChange={setSelectedGodownId}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select godown" />
-              </SelectTrigger>
-              <SelectContent>
-                {filteredGodowns.map((godown) => (
-                  <SelectItem key={godown.id} value={godown.id}>
-                    {godown.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
         </div>
       </Card>
@@ -292,6 +272,24 @@ const SaleEntryForm: React.FC = () => {
                         <Plus size={16} className="mr-1" /> Add
                       </Button>
                     </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="godown">Godown *</Label>
+                    <Select 
+                      value={selectedGodownId} 
+                      onValueChange={setSelectedGodownId}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select godown" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {filteredGodowns.map((godown) => (
+                          <SelectItem key={godown.id} value={godown.id}>
+                            {godown.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 
