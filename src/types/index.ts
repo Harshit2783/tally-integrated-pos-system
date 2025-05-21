@@ -88,7 +88,7 @@ export interface Sale {
   createdAt: string;
 }
 
-// Company Context Type - removed currentCompany and setCurrentCompany
+// Company Context Type - only includes companies and methods
 export interface CompanyContextType {
   companies: Company[];
   addCompany: (companyData: Omit<Company, 'id' | 'createdAt'>) => void;

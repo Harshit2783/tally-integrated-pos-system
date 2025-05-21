@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 
 interface InventoryContextType {
   items: Item[];
+  filteredItems: Item[]; // Added missing filteredItems property
   godowns: Godown[];
   filteredGodowns: Godown[];
   addItem: (item: Omit<Item, 'id' | 'createdAt'>) => void;
@@ -24,9 +25,15 @@ const InventoryContext = createContext<InventoryContextType | undefined>(undefin
 
 export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<Item[]>(mockItems);
+  const [filteredItems, setFilteredItems] = useState<Item[]>([]); // Added filteredItems state
   const [godowns, setGodowns] = useState<Godown[]>(mockGodowns);
   const [filteredGodowns, setFilteredGodowns] = useState<Godown[]>([]);
   
+  // Initialize filteredItems with all items initially
+  useEffect(() => {
+    setFilteredItems(items);
+  }, [items]);
+
   // Set all godowns as available initially
   useEffect(() => {
     setFilteredGodowns(godowns);
@@ -199,6 +206,7 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
     <InventoryContext.Provider
       value={{
         items,
+        filteredItems, // Add filteredItems to context value
         godowns,
         filteredGodowns,
         addItem,

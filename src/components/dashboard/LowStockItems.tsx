@@ -7,16 +7,20 @@ import { AlertTriangle } from 'lucide-react';
 const LowStockItems: React.FC = () => {
   const { filteredItems, filteredGodowns } = useInventory();
   
-  // Get items with low stock (10 or fewer)
+  // Get items with low stock (10 or fewer) with null check for filteredItems
   const lowStockItems = filteredItems
-    .filter(item => item.stockQuantity <= 10)
-    .sort((a, b) => a.stockQuantity - b.stockQuantity)
-    .slice(0, 5);
+    ? filteredItems
+        .filter(item => item.stockQuantity <= 10)
+        .sort((a, b) => a.stockQuantity - b.stockQuantity)
+        .slice(0, 5)
+    : [];
   
-  const godownNameMap = filteredGodowns.reduce((acc, godown) => {
-    acc[godown.id] = godown.name;
-    return acc;
-  }, {} as Record<string, string>);
+  const godownNameMap = filteredGodowns 
+    ? filteredGodowns.reduce((acc, godown) => {
+        acc[godown.id] = godown.name;
+        return acc;
+      }, {} as Record<string, string>)
+    : {};
   
   return (
     <Card>
@@ -24,7 +28,7 @@ const LowStockItems: React.FC = () => {
         <CardTitle className="text-lg font-semibold">Low Stock Items</CardTitle>
       </CardHeader>
       <CardContent>
-        {lowStockItems.length === 0 ? (
+        {(!lowStockItems || lowStockItems.length === 0) ? (
           <div className="text-center py-6 text-gray-500">
             No low stock items found
           </div>
