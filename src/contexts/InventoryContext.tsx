@@ -2,13 +2,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Item, Godown } from '../types';
 import { items as mockItems, godowns as mockGodowns, generateId } from '../data/mockData';
-import { useCompany } from './CompanyContext';
 import { toast } from 'sonner';
 
 interface InventoryContextType {
   items: Item[];
   godowns: Godown[];
-  filteredItems: Item[];
   filteredGodowns: Godown[];
   addItem: (item: Omit<Item, 'id' | 'createdAt'>) => void;
   updateItem: (item: Item) => void;
@@ -27,22 +25,12 @@ const InventoryContext = createContext<InventoryContextType | undefined>(undefin
 export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<Item[]>(mockItems);
   const [godowns, setGodowns] = useState<Godown[]>(mockGodowns);
-  const { currentCompany } = useCompany();
-  
-  const [filteredItems, setFilteredItems] = useState<Item[]>([]);
   const [filteredGodowns, setFilteredGodowns] = useState<Godown[]>([]);
-
-  // Filter items and godowns based on current company
+  
+  // Set all godowns as available initially
   useEffect(() => {
-    if (currentCompany) {
-      setFilteredItems(items.filter(item => item.companyId === currentCompany.id));
-      setFilteredGodowns(godowns.filter(godown => godown.companyId === currentCompany.id));
-    } else {
-      // If no company is selected, show all items
-      setFilteredItems(items);
-      setFilteredGodowns(godowns);
-    }
-  }, [currentCompany, items, godowns]);
+    setFilteredGodowns(godowns);
+  }, [godowns]);
 
   const getItemsByCompany = (companyId: string): Item[] => {
     return items.filter(item => item.companyId === companyId);
@@ -212,7 +200,6 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
       value={{
         items,
         godowns,
-        filteredItems,
         filteredGodowns,
         addItem,
         updateItem,

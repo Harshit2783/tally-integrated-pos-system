@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useInventory } from '../../contexts/InventoryContext';
@@ -17,8 +18,8 @@ const calculateGST = (price: number, quantity: number, gstPercentage: number) =>
 };
 
 const SaleEntryForm: React.FC = () => {
-  const { currentCompany } = useCompany();
-  const { filteredItems, filteredGodowns } = useInventory();
+  const { companies } = useCompany();
+  const { items, filteredGodowns } = useInventory();
   const { addSaleItem, currentSaleItems, removeSaleItem, createSale, clearSaleItems } = useSales();
 
   const [selectedItemId, setSelectedItemId] = useState<string>('');
@@ -29,9 +30,12 @@ const SaleEntryForm: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'GST' | 'NON-GST'>('GST');
   const [salesUnit, setSalesUnit] = useState<string>('Piece');
 
+  // Get all items, not just filtered by current company
+  const allItems = items || [];
+
   // Group items by GST and Non-GST
-  const gstItems = filteredItems.filter((item) => item.type === 'GST');
-  const nonGstItems = filteredItems.filter((item) => item.type === 'NON-GST');
+  const gstItems = allItems.filter((item) => item.type === 'GST');
+  const nonGstItems = allItems.filter((item) => item.type === 'NON-GST');
 
   // Group sale items by type
   const gstSaleItems = currentSaleItems.filter((item) => item.gstPercentage !== undefined);
@@ -63,21 +67,22 @@ const SaleEntryForm: React.FC = () => {
 
   useEffect(() => {
     if (selectedItemId) {
-      const item = filteredItems.find((item) => item.id === selectedItemId);
+      const item = allItems.find((item) => item.id === selectedItemId);
       setSelectedItem(item || null);
     } else {
       setSelectedItem(null);
     }
-  }, [selectedItemId, filteredItems]);
+  }, [selectedItemId, allItems]);
+
+  // Get company name from companyId
+  const getCompanyName = (companyId: string) => {
+    const company = companies?.find(c => c.id === companyId);
+    return company ? company.name : 'Unknown Company';
+  };
 
   const handleAddItem = () => {
     if (!selectedItem) {
       toast.error('Please select an item');
-      return;
-    }
-
-    if (!currentCompany) {
-      toast.error('No company selected');
       return;
     }
 
@@ -90,6 +95,9 @@ const SaleEntryForm: React.FC = () => {
       toast.error(`Only ${selectedItem.stockQuantity} units available in stock`);
       return;
     }
+
+    // Get company for the selected item
+    const companyName = getCompanyName(selectedItem.companyId);
 
     let gstAmount = 0;
     let totalPrice = selectedItem.unitPrice * quantity;
@@ -105,8 +113,8 @@ const SaleEntryForm: React.FC = () => {
 
     const saleItem: SaleItem = {
       itemId: selectedItem.id,
-      companyId: currentCompany.id,
-      companyName: currentCompany.name,
+      companyId: selectedItem.companyId,
+      companyName: companyName,
       name: selectedItem.name,
       quantity,
       unitPrice: selectedItem.unitPrice,
@@ -123,11 +131,6 @@ const SaleEntryForm: React.FC = () => {
   };
 
   const handleCreateSale = () => {
-    if (!currentCompany) {
-      toast.error('No company selected');
-      return;
-    }
-
     if (customerName.trim() === '') {
       toast.error('Please enter customer name');
       return;
@@ -138,77 +141,66 @@ const SaleEntryForm: React.FC = () => {
       return;
     }
 
-    if (gstSaleItems.length > 0 && nonGstSaleItems.length > 0) {
-      // Create separate bills for GST and Non-GST items
-      if (gstSaleItems.length > 0) {
+    // Group items by company
+    const itemsByCompany: Record<string, SaleItem[]> = {};
+    currentSaleItems.forEach(item => {
+      if (!itemsByCompany[item.companyId]) {
+        itemsByCompany[item.companyId] = [];
+      }
+      itemsByCompany[item.companyId].push(item);
+    });
+
+    // Create a separate sale for each company
+    let salesCreated = 0;
+    for (const [companyId, items] of Object.entries(itemsByCompany)) {
+      // Further separate by GST and Non-GST if needed
+      const companyGstItems = items.filter(item => item.gstPercentage !== undefined);
+      const companyNonGstItems = items.filter(item => item.gstPercentage === undefined);
+
+      if (companyGstItems.length > 0) {
         createSale({
-          companyId: currentCompany.id,
-          billNumber: `GST-${Date.now()}`,
+          companyId,
+          billNumber: `GST-${Date.now()}-${salesCreated}`,
           date: new Date().toISOString(),
           customerName,
           billType: 'GST',
           godownId: selectedGodownId,
-          totalAmount: gstTotals.total,
-          items: gstSaleItems
+          totalAmount: companyGstItems.reduce((sum, item) => sum + item.totalPrice, 0),
+          items: companyGstItems
         });
+        salesCreated++;
       }
 
-      if (nonGstSaleItems.length > 0) {
+      if (companyNonGstItems.length > 0) {
         createSale({
-          companyId: currentCompany.id,
-          billNumber: `NON-${Date.now()}`,
+          companyId,
+          billNumber: `NON-${Date.now()}-${salesCreated}`,
           date: new Date().toISOString(),
           customerName,
           billType: 'NON-GST',
           godownId: selectedGodownId,
-          totalAmount: nonGstTotals.total,
-          items: nonGstSaleItems
+          totalAmount: companyNonGstItems.reduce((sum, item) => sum + item.totalPrice, 0),
+          items: companyNonGstItems
         });
+        salesCreated++;
       }
-    } else if (gstSaleItems.length > 0) {
-      createSale({
-        companyId: currentCompany.id,
-        billNumber: `GST-${Date.now()}`,
-        date: new Date().toISOString(),
-        customerName,
-        billType: 'GST',
-        godownId: selectedGodownId,
-        totalAmount: gstTotals.total,
-        items: gstSaleItems
-      });
-    } else if (nonGstSaleItems.length > 0) {
-      createSale({
-        companyId: currentCompany.id,
-        billNumber: `NON-${Date.now()}`,
-        date: new Date().toISOString(),
-        customerName,
-        billType: 'NON-GST',
-        godownId: selectedGodownId,
-        totalAmount: nonGstTotals.total,
-        items: nonGstSaleItems
-      });
-    } else {
+    }
+
+    if (salesCreated === 0) {
       toast.error('No items added to the sale');
       return;
     }
 
     // Reset form
     setCustomerName('');
+    clearSaleItems();
   };
-
-  if (!currentCompany) {
-    return (
-      <Card className="p-6 text-center">
-        <p className="text-red-500">Please select a company first</p>
-      </Card>
-    );
-  }
 
   const displayItems = activeTab === 'GST' ? gstItems : nonGstItems;
 
   return (
     <div className="space-y-6">
-      {/* Customer Info Only (remove Godown from here) */}
+      {/* Customer Info Only */}
       <Card className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -247,7 +239,9 @@ const SaleEntryForm: React.FC = () => {
                       <SelectContent>
                         {displayItems.map((item) => (
                           <SelectItem key={item.id} value={item.id}>
-                            {item.name} - ₹{item.unitPrice} {item.type === 'GST' && `(GST: ${item.gstPercentage}%)`}
+                            {item.name} - ₹{item.unitPrice} 
+                            {item.type === 'GST' && ` (GST: ${item.gstPercentage}%)`} 
+                            - {getCompanyName(item.companyId)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -298,6 +292,7 @@ const SaleEntryForm: React.FC = () => {
                     <div className="text-xs text-gray-600">
                       <p>In stock: {selectedItem.stockQuantity} units</p>
                       <p>Unit price: ₹{selectedItem.unitPrice.toFixed(2)}</p>
+                      <p>Company: {getCompanyName(selectedItem.companyId)}</p>
                     </div>
                   )}
                 </div>
@@ -308,6 +303,7 @@ const SaleEntryForm: React.FC = () => {
                     <thead className="bg-gray-100">
                       <tr>
                         <th className="p-2 text-left">Item</th>
+                        <th className="p-2 text-left">Company</th>
                         <th className="p-2 text-left">Qty</th>
                         <th className="p-2 text-left">Unit Price</th>
                         {activeTab === 'GST' && <th className="p-2 text-left">GST %</th>}
@@ -321,6 +317,7 @@ const SaleEntryForm: React.FC = () => {
                         ? gstSaleItems.map((item, index) => (
                           <tr key={`gst-${index}`} className="border-t">
                             <td className="p-2">{item.name}</td>
+                            <td className="p-2">{item.companyName}</td>
                             <td className="p-2">{item.quantity}</td>
                             <td className="p-2">₹{item.unitPrice.toFixed(2)}</td>
                             <td className="p-2">{item.gstPercentage}%</td>
@@ -341,6 +338,7 @@ const SaleEntryForm: React.FC = () => {
                         : nonGstSaleItems.map((item, index) => (
                           <tr key={`non-gst-${index}`} className="border-t">
                             <td className="p-2">{item.name}</td>
+                            <td className="p-2">{item.companyName}</td>
                             <td className="p-2">{item.quantity}</td>
                             <td className="p-2">₹{item.unitPrice.toFixed(2)}</td>
                             <td className="p-2 font-medium">₹{item.totalPrice.toFixed(2)}</td>
@@ -361,7 +359,7 @@ const SaleEntryForm: React.FC = () => {
                        (activeTab === 'NON-GST' && nonGstSaleItems.length === 0) ? (
                         <tr>
                           <td 
-                            colSpan={activeTab === 'GST' ? 7 : 5} 
+                            colSpan={activeTab === 'GST' ? 8 : 6} 
                             className="p-4 text-center text-gray-500"
                           >
                             No items added yet
@@ -381,43 +379,73 @@ const SaleEntryForm: React.FC = () => {
           <Card className="p-6">
             <h3 className="font-semibold text-lg mb-4">Bill Summary</h3>
             
-            {gstSaleItems.length > 0 && (
-              <div className="mb-4">
-                <h4 className="font-medium text-sm text-gray-600 mb-2">GST Bill</h4>
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between">
-                    <span>Subtotal:</span>
-                    <span>₹{gstTotals.subtotal.toFixed(2)}</span>
+            {/* Group summary by company */}
+            {Object.entries(currentSaleItems.reduce((acc, item) => {
+              if (!acc[item.companyId]) {
+                acc[item.companyId] = {
+                  companyName: item.companyName,
+                  gstItems: [],
+                  nonGstItems: []
+                };
+              }
+              
+              if (item.gstPercentage) {
+                acc[item.companyId].gstItems.push(item);
+              } else {
+                acc[item.companyId].nonGstItems.push(item);
+              }
+              
+              return acc;
+            }, {} as Record<string, {companyName: string, gstItems: SaleItem[], nonGstItems: SaleItem[]}> )).map(([companyId, data]) => (
+              <div key={companyId} className="mb-4 border-b pb-4">
+                <h4 className="font-medium text-md text-gray-800 mb-2">{data.companyName}</h4>
+                
+                {data.gstItems.length > 0 && (
+                  <div className="mb-3">
+                    <h5 className="font-medium text-sm text-gray-600 mb-1">GST Items</h5>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span>Subtotal:</span>
+                        <span>₹{data.gstItems.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>GST:</span>
+                        <span>₹{data.gstItems.reduce((sum, item) => sum + (item.gstAmount || 0), 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between font-medium">
+                        <span>Total:</span>
+                        <span>₹{data.gstItems.reduce((sum, item) => sum + item.totalPrice, 0).toFixed(2)}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span>GST:</span>
-                    <span>₹{gstTotals.gstAmount.toFixed(2)}</span>
+                )}
+                
+                {data.nonGstItems.length > 0 && (
+                  <div className="mb-3">
+                    <h5 className="font-medium text-sm text-gray-600 mb-1">Non-GST Items</h5>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between font-medium">
+                        <span>Total:</span>
+                        <span>₹{data.nonGstItems.reduce((sum, item) => sum + item.totalPrice, 0).toFixed(2)}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex justify-between font-medium">
-                    <span>Total:</span>
-                    <span>₹{gstTotals.total.toFixed(2)}</span>
+                )}
+                
+                <div className="pt-2 mt-2">
+                  <div className="flex justify-between text-md font-semibold">
+                    <span>Company Total:</span>
+                    <span>₹{[...data.gstItems, ...data.nonGstItems].reduce((sum, item) => sum + item.totalPrice, 0).toFixed(2)}</span>
                   </div>
                 </div>
               </div>
-            )}
+            ))}
             
-            {nonGstSaleItems.length > 0 && (
-              <div className="mb-4">
-                <h4 className="font-medium text-sm text-gray-600 mb-2">Non-GST Bill</h4>
-                <div className="space-y-1 text-sm">
-                  <div className="flex justify-between font-medium">
-                    <span>Total:</span>
-                    <span>₹{nonGstTotals.total.toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {(gstSaleItems.length > 0 || nonGstSaleItems.length > 0) && (
+            {currentSaleItems.length > 0 && (
               <div className="pt-4 border-t mt-4">
                 <div className="flex justify-between font-semibold text-lg">
                   <span>Grand Total:</span>
-                  <span>₹{(gstTotals.total + nonGstTotals.total).toFixed(2)}</span>
+                  <span>₹{currentSaleItems.reduce((sum, item) => sum + item.totalPrice, 0).toFixed(2)}</span>
                 </div>
               </div>
             )}

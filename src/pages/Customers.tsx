@@ -1,12 +1,7 @@
-/**
- * Customers Page
- * Manages customer information with functionality to view, add, edit,
- * and manage customer records within the system.
- */
 
 import React, { useState } from 'react';
 import MainLayout from '../components/layout/MainLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import CustomersList from '../components/customers/CustomersList';
 import CustomerForm from '../components/customers/CustomerForm';
 import { Button } from '@/components/ui/button';
