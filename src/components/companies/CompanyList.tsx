@@ -1,8 +1,8 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useCompany } from '../../contexts/CompanyContext';
 import { Company } from '../../types';
-import { Edit, Trash2, CheckCircle } from 'lucide-react';
+import { Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
@@ -12,11 +12,7 @@ interface CompanyListProps {
 }
 
 const CompanyList: React.FC<CompanyListProps> = ({ onEdit, onDelete }) => {
-  const { companies, currentCompany, setCurrentCompany } = useCompany();
-
-  const handleSetActive = (company: Company) => {
-    setCurrentCompany(company);
-  };
+  const { companies } = useCompany();
 
   if (companies.length === 0) {
     return (
@@ -43,32 +39,16 @@ const CompanyList: React.FC<CompanyListProps> = ({ onEdit, onDelete }) => {
             {companies.map((company) => (
               <tr 
                 key={company.id} 
-                className={`bg-white border-b hover:bg-gray-50 ${
-                  currentCompany?.id === company.id ? 'bg-blue-50' : ''
-                }`}
+                className="bg-white border-b hover:bg-gray-50"
               >
                 <td className="px-6 py-4 font-medium">
-                  <div className="flex items-center">
-                    {currentCompany?.id === company.id && (
-                      <CheckCircle size={16} className="text-green-500 mr-2" />
-                    )}
-                    {company.name}
-                  </div>
+                  {company.name}
                 </td>
                 <td className="px-6 py-4">{company.gstin || '-'}</td>
                 <td className="px-6 py-4">{company.address}</td>
                 <td className="px-6 py-4">{company.phone || '-'}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex space-x-2">
-                    {currentCompany?.id !== company.id && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => handleSetActive(company)}
-                      >
-                        Set Active
-                      </Button>
-                    )}
                     <Button
                       variant="outline"
                       size="icon"
