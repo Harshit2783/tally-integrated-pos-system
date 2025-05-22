@@ -149,7 +149,8 @@ const SaleEntryForm: React.FC = () => {
           billType: 'GST',
           godownId: selectedGodownId,
           totalAmount: gstTotals.total,
-          items: gstSaleItems
+          items: gstSaleItems,
+          createdBy: 'Unknown',
         });
       }
 
@@ -162,7 +163,8 @@ const SaleEntryForm: React.FC = () => {
           billType: 'NON-GST',
           godownId: selectedGodownId,
           totalAmount: nonGstTotals.total,
-          items: nonGstSaleItems
+          items: nonGstSaleItems,
+          createdBy: 'Unknown',
         });
       }
     } else if (gstSaleItems.length > 0) {
@@ -174,7 +176,8 @@ const SaleEntryForm: React.FC = () => {
         billType: 'GST',
         godownId: selectedGodownId,
         totalAmount: gstTotals.total,
-        items: gstSaleItems
+        items: gstSaleItems,
+        createdBy: 'Unknown',
       });
     } else if (nonGstSaleItems.length > 0) {
       createSale({
@@ -185,7 +188,8 @@ const SaleEntryForm: React.FC = () => {
         billType: 'NON-GST',
         godownId: selectedGodownId,
         totalAmount: nonGstTotals.total,
-        items: nonGstSaleItems
+        items: nonGstSaleItems,
+        createdBy: 'Unknown',
       });
     } else {
       toast.error('No items added to the sale');
