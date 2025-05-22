@@ -246,26 +246,22 @@ const EnhancedSaleForm: React.FC = () => {
       toast.error('Quantity must be greater than 0');
       return;
     }
-    // If item has discountSlabs, use the correct slab price for the quantity
-    let priceToUse = exclusiveCost;
-    if (selectedItem.discountSlabs && selectedItem.discountSlabs.length > 0) {
-      const slab = selectedItem.discountSlabs.find(s => quantity >= s.min && (s.max === Infinity || quantity <= s.max));
-      if (slab) {
-        priceToUse = slab.price;
-      }
+    if (!hsnCode) {
+      toast.error('HSN Code is required for items with GST');
+      return;
     }
     let discountValue = 0;
     let discountPercentage = 0;
     if (discount > 0) {
       if (discountType === 'amount') {
         discountValue = discount;
-        discountPercentage = (discount / (priceToUse * quantity)) * 100;
+        discountPercentage = (discount / (exclusiveCost * quantity)) * 100;
       } else {
         discountPercentage = discount;
-        discountValue = (priceToUse * quantity * discount) / 100;
+        discountValue = (exclusiveCost * quantity * discount) / 100;
       }
     }
-    const baseAmount = priceToUse * quantity;
+    const baseAmount = exclusiveCost * quantity;
     const discountedBaseAmount = baseAmount - discountValue;
     let itemGstAmount = 0;
     if (gstRate > 0) {
@@ -279,8 +275,8 @@ const EnhancedSaleForm: React.FC = () => {
       companyName: itemCompany ? itemCompany.name : 'Unknown Company',
       name: selectedItem.name,
       quantity,
-      unitPrice: priceToUse,
-      mrp: priceToUse,
+      unitPrice: exclusiveCost,
+      mrp: mrp,
       salesUnit,
       gstPercentage: gstRate > 0 ? gstRate : undefined,
       gstAmount: itemGstAmount,
@@ -512,9 +508,6 @@ const EnhancedSaleForm: React.FC = () => {
       details += ` (GST: ${item.gstPercentage}%)`;
     }
     details += ` - ₹${item.unitPrice !== undefined ? item.unitPrice : 0}`;
-    if (item.discountSlabs && item.discountSlabs.length > 0) {
-      details += ` [Bulk pricing available]`;
-    }
     return details;
   };
 
@@ -555,12 +548,6 @@ const EnhancedSaleForm: React.FC = () => {
 
   // Remove popover/ref/focus logic for customer name input
   const [customerNameInputFocused, setCustomerNameInputFocused] = useState(false);
-
-  // Helper to get company name by id
-  const getCompanyName = (companyId: string) => {
-    const company = companies?.find(c => c.id === companyId);
-    return company ? company.name : 'Unknown Company';
-  };
 
   // Loading state
   if (isLoading) {
@@ -698,29 +685,7 @@ const EnhancedSaleForm: React.FC = () => {
                                 selectedItemId === item.id ? "opacity-100" : "opacity-0"
                               )}
                             />
-                            <div>
-                              <div className="font-medium">
-                                {item.name}
-                                {item.type === 'GST' && item.gstPercentage ? ` (GST: ${item.gstPercentage}%)` : ''} - ₹{item.unitPrice}
-                                {item.discountSlabs && item.discountSlabs.length > 0 && (
-                                  <span className="text-xs text-blue-600 ml-2">[Bulk pricing available]</span>
-                                )}
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                {getCompanyName(item.companyId)} | In stock: {item.stockQuantity} {item.salesUnit}
-                                {item.discountSlabs && item.discountSlabs.length > 0 && (
-                                  <div className="mt-1">
-                                    {item.discountSlabs.map((slab, idx) => (
-                                      <span key={idx} className="mr-2">
-                                        {slab.max === Infinity
-                                          ? `${slab.min}+: ₹${slab.price}`
-                                          : `${slab.min}-${slab.max}: ₹${slab.price}`}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
+                            {getItemDisplayDetails(item)}
                           </button>
                         ))
                       )}
@@ -731,66 +696,14 @@ const EnhancedSaleForm: React.FC = () => {
             </div>
             
             <div className="col-span-6 md:col-span-2">
-              {selectedItem?.discountSlabs && selectedItem.discountSlabs.length > 0 ? (
-                <div>
-                  <Label htmlFor="quantityInSlab">Quantity</Label>
-                  <Input
-                    id="quantityInSlab"
-                    type="number"
-                    min={selectedItem.discountSlabs[0].min}
-                    value={quantity === 0 ? '' : quantity}
-                    onChange={e => {
-                      const val = e.target.value;
-                      if (val === '') {
-                        setQuantity(0);
-                        return;
-                      }
-                      const num = parseInt(val);
-                      setQuantity(isNaN(num) ? 0 : num);
-                      // Find the correct slab for this quantity
-                      const slab = selectedItem.discountSlabs.find(s => num >= s.min && (s.max === Infinity || num <= s.max));
-                      if (slab && !isNaN(num)) {
-                        setExclusiveCost(slab.price);
-                      }
-                    }}
-                    onBlur={e => {
-                      let val = parseInt(e.target.value);
-                      if (isNaN(val) || val < selectedItem.discountSlabs[0].min) {
-                        val = selectedItem.discountSlabs[0].min;
-                        setQuantity(val);
-                        const slab = selectedItem.discountSlabs.find(s => val >= s.min && (s.max === Infinity || val <= s.max));
-                        if (slab) {
-                          setExclusiveCost(slab.price);
-                        }
-                      }
-                    }}
-                    className="w-full"
-                    placeholder="Qty"
-                  />
-                  {/* Show current slab info */}
-                  {(() => {
-                    const slab = selectedItem.discountSlabs.find(s => quantity >= s.min && (s.max === Infinity || quantity <= s.max));
-                    return slab ? (
-                      <div className="text-xs text-gray-500 mt-1">
-                        {slab.max === Infinity
-                          ? `${slab.min}+ units`
-                          : `${slab.min}-${slab.max} units`} at ₹{slab.price}/unit
-                      </div>
-                    ) : null;
-                  })()}
-                </div>
-              ) : (
-                <div>
-                  <Label htmlFor="quantity">Quantity</Label>
-                  <Input
-                    id="quantity"
-                    type="number"
-                    min="1"
-                    value={quantity}
-                    onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
-                  />
-                </div>
-              )}
+              <Label htmlFor="quantity">Quantity</Label>
+              <Input
+                id="quantity"
+                type="number"
+                min="1"
+                value={quantity}
+                onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
+              />
             </div>
             
             <div className="col-span-6 md:col-span-1">
@@ -897,13 +810,13 @@ const EnhancedSaleForm: React.FC = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
-              <Label htmlFor="hsnCode">HSN Code</Label>
+              <Label htmlFor="hsnCode">HSN Code *</Label>
               <Select 
                 value={hsnCode} 
                 onValueChange={setHsnCode}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select HSN Code (optional)" />
+                  <SelectValue placeholder="Select HSN Code" />
                 </SelectTrigger>
                 <SelectContent>
                   {HSN_CODES.map((code) => (
@@ -913,7 +826,7 @@ const EnhancedSaleForm: React.FC = () => {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-500 mt-1">HSN code will be auto-filled if available, otherwise bill will be generated without it.</p>
+              <p className="text-xs text-gray-500 mt-1">Required for items with GST</p>
             </div>
             
             <div>
