@@ -1,4 +1,3 @@
-
 import { Company, Godown, Item, Sale, SaleItem } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -79,6 +78,11 @@ export const items: Item[] = [
     godownId: '1',
     stockQuantity: 50,
     salesUnit: 'Piece',
+    discountSlabs: [
+      { min: 1, max: 5, price: 250 },
+      { min: 6, max: 10, price: 245 },
+      { min: 11, max: Infinity, price: 240 }
+    ],
     createdAt: new Date().toISOString()
   },
   {
@@ -92,6 +96,11 @@ export const items: Item[] = [
     godownId: '1',
     stockQuantity: 100,
     salesUnit: 'Piece',
+    discountSlabs: [
+      { min: 1, max: 3, price: 2500 },
+      { min: 4, max: 10, price: 2400 },
+      { min: 11, max: Infinity, price: 2300 }
+    ],
     createdAt: new Date().toISOString()
   },
   {
@@ -117,6 +126,11 @@ export const items: Item[] = [
     godownId: '3',
     stockQuantity: 30,
     salesUnit: 'Piece',
+    discountSlabs: [
+      { min: 1, max: 2, price: 35000 },
+      { min: 3, max: 5, price: 34000 },
+      { min: 6, max: Infinity, price: 33000 }
+    ],
     createdAt: new Date().toISOString()
   },
   {
