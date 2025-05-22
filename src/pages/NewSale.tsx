@@ -10,7 +10,7 @@ import MainLayout from '../components/layout/MainLayout';
 import { CompanyProvider } from '../contexts/CompanyContext';
 import { InventoryProvider } from '../contexts/InventoryContext';
 import { SalesProvider } from '../contexts/SalesContext';
-import SaleEntryForm from '../components/sales/SaleEntryForm';
+import EnhancedSaleForm from '../components/sales/EnhancedSaleForm';
 
 const NewSale = () => {
   return (
@@ -20,7 +20,7 @@ const NewSale = () => {
           <h2 className="text-3xl font-bold tracking-tight">New Sale</h2>
         </div>
         
-        <SaleEntryForm />
+        <EnhancedSaleForm />
       </div>
     </MainLayout>
   );
