@@ -174,7 +174,10 @@ const EnhancedSaleForm: React.FC = () => {
     }
   }, [filteredGodowns, selectedGodownId]);
 
-  // Update item details when item selection changes
+  // Add a state to track if the selected item is a GST item
+  const [isGstItem, setIsGstItem] = useState<boolean>(false);
+
+  // Update the useEffect that handles item selection to also set isGstItem
   useEffect(() => {
     if (selectedItemId && itemsToShow && itemsToShow.length > 0) {
       const item = itemsToShow.find((item) => item.id === selectedItemId);
@@ -184,6 +187,10 @@ const EnhancedSaleForm: React.FC = () => {
         let itemGstRate = item.type === 'GST' ? (item.gstPercentage || 0) : 0;
         setGstRate(itemGstRate);
         setHsnCode(item.hsnCode || '');
+        
+        // Set the isGstItem state based on the item type
+        setIsGstItem(item.type === 'GST');
+        
         if (itemGstRate > 0) {
           if (item.mrp) {
             setMrp(item.mrp);
@@ -210,6 +217,7 @@ const EnhancedSaleForm: React.FC = () => {
         setGstRate(0);
         setGstAmount(0);
         setHsnCode('');
+        setIsGstItem(false);
       }
     } else {
       setSelectedItem(null);
@@ -218,25 +226,11 @@ const EnhancedSaleForm: React.FC = () => {
       setGstRate(0);
       setGstAmount(0);
       setHsnCode('');
+      setIsGstItem(false);
     }
   }, [selectedItemId, itemsToShow, quantity]);
 
-  // Handle MRP change
-  const handleMrpChange = (value: number) => {
-    setMrp(value);
-    if (gstRate > 0) {
-      const newExclusiveCost = calculateExclusiveCost(value, gstRate);
-      setExclusiveCost(newExclusiveCost);
-      
-      const newGstAmount = value - newExclusiveCost;
-      setGstAmount(newGstAmount * quantity);
-    } else {
-      setExclusiveCost(value);
-      setGstAmount(0);
-    }
-  };
-  
-  // Handle adding item to bill
+  // Update handleAddItem to only validate HSN code for GST items
   const handleAddItem = () => {
     if (!selectedItem) {
       toast.error('Please select an item');
@@ -246,10 +240,12 @@ const EnhancedSaleForm: React.FC = () => {
       toast.error('Quantity must be greater than 0');
       return;
     }
-    if (!hsnCode) {
+    // Only validate HSN code for GST items
+    if (isGstItem && !hsnCode) {
       toast.error('HSN Code is required for items with GST');
       return;
     }
+    
     let discountValue = 0;
     let discountPercentage = 0;
     if (discount > 0) {
@@ -810,13 +806,14 @@ const EnhancedSaleForm: React.FC = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
-              <Label htmlFor="hsnCode">HSN Code *</Label>
+              <Label htmlFor="hsnCode">HSN Code {isGstItem ? '*' : ''}</Label>
               <Select 
                 value={hsnCode} 
                 onValueChange={setHsnCode}
+                disabled={!isGstItem}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select HSN Code" />
+                  <SelectValue placeholder={isGstItem ? "Select HSN Code" : "Not required for Non-GST items"} />
                 </SelectTrigger>
                 <SelectContent>
                   {HSN_CODES.map((code) => (
@@ -826,7 +823,12 @@ const EnhancedSaleForm: React.FC = () => {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-500 mt-1">Required for items with GST</p>
+              {isGstItem && (
+                <p className="text-xs text-gray-500 mt-1">Required for items with GST</p>
+              )}
+              {!isGstItem && (
+                <p className="text-xs text-gray-500 mt-1">HSN Code not required for Non-GST items</p>
+              )}
             </div>
             
             <div>
