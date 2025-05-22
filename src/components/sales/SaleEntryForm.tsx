@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useInventory } from '../../contexts/InventoryContext';
@@ -149,7 +150,8 @@ const SaleEntryForm: React.FC = () => {
           billType: 'GST',
           godownId: selectedGodownId,
           totalAmount: gstTotals.total,
-          items: gstSaleItems
+          items: gstSaleItems,
+          createdBy: 'System' // Added missing createdBy field
         });
       }
 
@@ -162,7 +164,8 @@ const SaleEntryForm: React.FC = () => {
           billType: 'NON-GST',
           godownId: selectedGodownId,
           totalAmount: nonGstTotals.total,
-          items: nonGstSaleItems
+          items: nonGstSaleItems,
+          createdBy: 'System' // Added missing createdBy field
         });
       }
     } else if (gstSaleItems.length > 0) {
@@ -174,7 +177,8 @@ const SaleEntryForm: React.FC = () => {
         billType: 'GST',
         godownId: selectedGodownId,
         totalAmount: gstTotals.total,
-        items: gstSaleItems
+        items: gstSaleItems,
+        createdBy: 'System' // Added missing createdBy field
       });
     } else if (nonGstSaleItems.length > 0) {
       createSale({
@@ -185,7 +189,8 @@ const SaleEntryForm: React.FC = () => {
         billType: 'NON-GST',
         godownId: selectedGodownId,
         totalAmount: nonGstTotals.total,
-        items: nonGstSaleItems
+        items: nonGstSaleItems,
+        createdBy: 'System' // Added missing createdBy field
       });
     } else {
       toast.error('No items added to the sale');

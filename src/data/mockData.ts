@@ -174,7 +174,8 @@ export const sales: Sale[] = [
         salesUnit: 'Piece'
       }
     ],
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    createdBy: 'System' // Added missing createdBy field
   },
   {
     id: '2',
@@ -198,7 +199,8 @@ export const sales: Sale[] = [
         salesUnit: 'Packet'
       }
     ],
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    createdBy: 'System' // Added missing createdBy field
   }
 ];
 
