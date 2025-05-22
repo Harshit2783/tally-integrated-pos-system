@@ -37,7 +37,6 @@ export interface Item {
   stockQuantity: number;
   salesUnit: 'Case' | 'Packet' | 'Piece';
   createdAt: string;
-  discountSlabs?: { min: number; max: number; price: number }[];
 }
 
 export interface SaleItem {
