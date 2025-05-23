@@ -2,6 +2,7 @@ import express from 'express'
 import dotenv from 'dotenv'
 import cors from 'cors'
 import { connectToTally } from './config/tally.config.js';
+import stockTallyRoutes from './routes/stockTallyRoutes.js'
 
 
 const app = express();
@@ -18,6 +19,7 @@ app.get("/",(req,res)=>{
     console.log('All OK');
     res.send("ALL OK")
 })
+
 //checking connection to Tally Prime
 const connectionStatus = await connectToTally();
 console.log(connectionStatus);
@@ -25,6 +27,8 @@ console.log(connectionStatus);
 if(connectionStatus)
 {
     //tally is connected successfully....
+    //Routes
+    app.use('/api/tally/stocks', stockTallyRoutes)
 
     //NOW CALL TALLY-RELATED APISN HERE...
 }

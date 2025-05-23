@@ -1,7 +1,7 @@
 import fetch from 'node-fetch'
 import path from 'path'
 import fs from 'fs'
-import { boolean } from 'zod'
+
 
 export const connectToTally = async()=>{
     try{
