@@ -246,10 +246,6 @@ const EnhancedSaleForm: React.FC = () => {
       toast.error('Quantity must be greater than 0');
       return;
     }
-    if (!hsnCode) {
-      toast.error('HSN Code is required for items with GST');
-      return;
-    }
     let discountValue = 0;
     let discountPercentage = 0;
     if (discount > 0) {
@@ -502,13 +498,35 @@ const EnhancedSaleForm: React.FC = () => {
 
   const getItemDisplayDetails = (item: Item) => {
     if (!item) return "";
-    
-    let details = item.name || "";
-    if (item.type === 'GST' && item.gstPercentage) {
-      details += ` (GST: ${item.gstPercentage}%)`;
-    }
-    details += ` - ₹${item.unitPrice !== undefined ? item.unitPrice : 0}`;
-    return details;
+    const company = companies.find(c => c.id === item.companyId);
+    const hasBulkPrices = Array.isArray((item as any).bulkPrices) && (item as any).bulkPrices.length > 0;
+    return (
+      <div className="w-full">
+        <div className="flex items-center justify-between">
+          <span className="font-semibold">
+            {item.name}
+            {item.type === 'GST' && item.gstPercentage ? ` (GST: ${item.gstPercentage}%)` : ''} - ₹{item.unitPrice}
+          </span>
+          {/* Bulk pricing link if available */}
+          {hasBulkPrices && (
+            <span className="text-xs text-blue-600 ml-2">[Bulk pricing available]</span>
+          )}
+        </div>
+        <div className="text-xs text-gray-600">
+          {company ? company.name : 'Unknown Company'} | In stock: {item.stockQuantity} {item.salesUnit}
+        </div>
+        {/* Bulk pricing slabs if available */}
+        {hasBulkPrices && (
+          <div className="text-xs text-gray-500 mt-1 flex flex-wrap gap-2">
+            {(item as any).bulkPrices.map((slab: any, idx: number) => (
+              <span key={idx}>
+                {slab.range}: ₹{slab.price}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   // Add updateSaleItem if it doesn't exist in the context
@@ -810,7 +828,7 @@ const EnhancedSaleForm: React.FC = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
-              <Label htmlFor="hsnCode">HSN Code *</Label>
+              <Label htmlFor="hsnCode">HSN Code</Label>
               <Select 
                 value={hsnCode} 
                 onValueChange={setHsnCode}
@@ -826,7 +844,7 @@ const EnhancedSaleForm: React.FC = () => {
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-500 mt-1">Required for items with GST</p>
+              <p className="text-xs text-gray-500 mt-1">Optional - Required for GST items</p>
             </div>
             
             <div>
