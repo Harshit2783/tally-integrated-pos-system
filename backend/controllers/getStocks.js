@@ -13,7 +13,7 @@ export async function getStocks(){
     const xml = buildTallyXML(
         {
             requestType : 'Export',
-            reportName : 'Stock Summary',
+            reportName : 'Stock Item-Wise Summary',
             companyName : 'ManSan Raj Traders'
         }
     );
