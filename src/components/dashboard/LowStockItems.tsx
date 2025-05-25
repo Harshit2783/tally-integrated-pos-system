@@ -46,7 +46,7 @@ const LowStockItems: React.FC = () => {
                     <div className="text-sm text-muted-foreground">
                       {godownNameMap[item.godownId] || 'Unknown Godown'} • {item.type}
                     </div>
-                    <div className="text-sm">₹{item.unitPrice.toFixed(2)}</div>
+                    <div className="text-sm">₹{item.unitPrice}</div>
                   </div>
                 </div>
               </div>

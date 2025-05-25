@@ -4,6 +4,8 @@ import { Item, Godown } from '../types';
 import { items as mockItems, godowns as mockGodowns, generateId } from '../data/mockData';
 import { useCompany } from './CompanyContext';
 import { toast } from 'sonner';
+import axios from '@/lib/axios';
+import { G } from '@react-pdf/renderer';
 
 interface InventoryContextType {
   items: Item[];
@@ -25,12 +27,54 @@ interface InventoryContextType {
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
 
 export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [items, setItems] = useState<Item[]>(mockItems);
+  //declaring items as an empty array
+  const [items, setItems] = useState<Item[]>([]);
   const [godowns, setGodowns] = useState<Godown[]>(mockGodowns);
   const { currentCompany } = useCompany();
   
   const [filteredItems, setFilteredItems] = useState<Item[]>([]);
   const [filteredGodowns, setFilteredGodowns] = useState<Godown[]>([]);
+
+
+  //fetch items from backend
+  //api calling
+  useEffect(()=>{
+    const fetchItems = async()=>{
+      try{
+        const result  = await axios.post('/api/tally/stocks/fetch-items');
+        
+        //items obtained as array of object in result.data
+
+        const mappedItems : Item[] = result.data.map((item,index : number)=>({
+          id : (index+1).toString(),
+          type : 'NA',
+          name : item.itemName,
+          stockQuantity : item.quantity,
+          unitPrice : item.rate,
+          // HSN : item.HSN
+          
+          
+        })
+      )
+
+      setItems(mappedItems)
+
+        
+        
+
+      }
+      catch(err)
+      {
+        console.log(err.message);
+
+
+      }
+    };
+
+    fetchItems()
+  },[])
+
+
 
   // Filter items and godowns based on current company
   useEffect(() => {

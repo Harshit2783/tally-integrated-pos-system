@@ -15,6 +15,7 @@ import {
 import { useInventory } from '../../contexts/InventoryContext';
 import { useCompany } from '../../contexts/CompanyContext';
 import { toast } from 'sonner';
+import axios from '@/lib/axios';
 
 interface ItemFormProps {
   item?: Item;

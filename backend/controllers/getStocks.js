@@ -5,7 +5,7 @@ import fs from 'fs'
 import path from "path";
 import { stocksXMLCleaner } from "../utils/stocksXMLCleaner.js";
 
-export async function getStocks(){
+export async function getStocks(req,res){
     //build xml for making http request to tally
     const config = JSON.parse(fs.readFileSync(path.resolve('./tally.config.json'),'utf-8')) 
     const tallyURL = config.connectionURL
@@ -13,7 +13,7 @@ export async function getStocks(){
     const xml = buildTallyXML(
         {
             requestType : 'Export',
-            reportName : 'Stock Item-Wise Summary',
+            reportName : 'Stock Summary',
             companyName : 'ManSan Raj Traders'
         }
     );
@@ -32,6 +32,9 @@ export async function getStocks(){
         const stocksJSON = await parseTallyXMLtoJSON(resultString);
         //converting into readable json to send to frontend
         const refinedItems = stocksXMLCleaner(stocksJSON);
+
+        res.status(200).json(refinedItems)
+        
 
        
      

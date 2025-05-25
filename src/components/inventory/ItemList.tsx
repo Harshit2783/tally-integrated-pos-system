@@ -107,7 +107,7 @@ const ItemList: React.FC<ItemListProps> = ({ onEdit, onDelete, companyId }) => {
                 <TableHead>MRP</TableHead>
                 <TableHead>GST %</TableHead>
                 <TableHead>HSN Code</TableHead>
-                <TableHead>Sales Unit</TableHead>
+                {/* <TableHead>Sales Unit</TableHead> */}
                 <TableHead>Godown</TableHead>
                 <TableHead>Stock</TableHead>
                 <TableHead>Actions</TableHead>
@@ -119,14 +119,14 @@ const ItemList: React.FC<ItemListProps> = ({ onEdit, onDelete, companyId }) => {
                   <TableRow key={item.id}>
                     <TableCell>{item.itemId}</TableCell>
                     <TableCell>{item.name}</TableCell>
-                    <TableCell>{getCompanyName(item.companyId)}</TableCell>
+                    <TableCell>{`ManSan Raj Traders`}</TableCell>
                     <TableCell>{item.type}</TableCell>
-                    <TableCell>₹{item.unitPrice.toFixed(2)}</TableCell>
-                    <TableCell>{item.mrp ? `₹${item.mrp.toFixed(2)}` : 'N/A'}</TableCell>
+                    <TableCell>₹{item.unitPrice}</TableCell>
+                    {/* <TableCell>{item.mrp ? `₹${item.mrp.toFixed(2)}` : 'N/A'}</TableCell> */}
                     <TableCell>{item.type === 'GST' ? `${item.gstPercentage}%` : 'N/A'}</TableCell>
                     <TableCell>{item.hsnCode || 'N/A'}</TableCell>
                     <TableCell>{item.salesUnit}</TableCell>
-                    <TableCell>{getGodownName(item.godownId)}</TableCell>
+                    <TableCell>{`Main Godown`}</TableCell>
                     <TableCell>{item.stockQuantity}</TableCell>
                     <TableCell className="flex items-center gap-2">
                       <Button

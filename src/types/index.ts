@@ -84,7 +84,7 @@ export interface Sale {
   totalExclusiveCost?: number;
   totalGst?: number;
   items: SaleItem[];
-  createdBy: string;
+  // createdBy: string;
   createdAt: string;
 }
 

@@ -181,7 +181,7 @@ const EnhancedSaleForm: React.FC = () => {
       if (item) {
         setSelectedItem(item);
         // Set GST rate based on company and item
-        let itemGstRate = item.type === 'GST' ? (item.gstPercentage || 0) : 0;
+        const itemGstRate = item.type === 'GST' ? (item.gstPercentage || 0) : 0;
         setGstRate(itemGstRate);
         setHsnCode(item.hsnCode || '');
         if (itemGstRate > 0) {
