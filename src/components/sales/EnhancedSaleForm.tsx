@@ -22,20 +22,24 @@ import { CheckIcon, ChevronDown } from 'lucide-react';
 import CustomerForm from '../customers/CustomerForm';
 import { useCustomers } from '../../contexts/CustomersContext';
 import { useAuth } from '../../contexts/AuthContext';
+import CustomerInfo from './CustomerInfo';
+import ItemEntryForm from './ItemEntryForm';
+import SaleItemsTable from './SaleItemsTable';
+import CompanySummary from './CompanySummary';
+import SaleSummary from './SaleSummary';
+import DiscountDialog from './DiscountDialog';
 
 // Define sales units
 const SALES_UNITS = ['Case', 'Packet', 'Piece'];
 
-// Define GST rates
-const GST_RATES = [5, 12, 18, 28];
-
-// HSN Codes (sample)
-const HSN_CODES = [
-  '0910', '1101', '1902', '2106', '3004',
-  '3306', '3401', '3402', '3923', '4818',
-  '6911', '7321', '8414', '8418', '8450',
-  '8516', '8517', '8528', '9503'
-];
+// TODO: These will be fetched from backend
+// const GST_RATES = [5, 12, 18, 28];
+// const HSN_CODES = [
+//   '0910', '1101', '1902', '2106', '3004',
+//   '3306', '3401', '3402', '3923', '4818',
+//   '6911', '7321', '8414', '8418', '8450',
+//   '8516', '8517', '8528', '9503'
+// ];
 
 // Define type for company summary
 interface CompanySummary {
@@ -578,601 +582,48 @@ const EnhancedSaleForm: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Customer and Godown Info */}
-      <Card className="p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-          <div className="space-y-2 flex items-end">
-            <div className="flex-1">
-              <Label htmlFor="customerName">Customer Name *</Label>
-              <div className="relative">
-                <Input
-                  id="customerName"
-                  value={customerName}
-                  onChange={e => setCustomerName(e.target.value)}
-                  placeholder="Enter customer name"
-                  required
-                  disabled={showCustomerForm}
-                  autoComplete="off"
-                  onFocus={() => setCustomerNameInputFocused(true)}
-                  onBlur={() => setTimeout(() => setCustomerNameInputFocused(false), 100)}
-                />
-                {customerNameInputFocused && customerName && filteredCustomerSuggestions.length > 0 && (
-                  <div className="absolute z-10 left-0 right-0 bg-white border border-gray-200 rounded shadow max-h-60 overflow-auto">
-                    {filteredCustomerSuggestions.map((c) => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        className="w-full text-left px-3 py-2 hover:bg-gray-100"
-                        onMouseDown={e => {
-                          e.preventDefault();
-                          setCustomerName(c.name);
-                          setCustomerNameInputFocused(false);
-                        }}
-                      >
-                        <div className="font-medium">{c.name}</div>
-                        <div className="text-xs text-gray-500">{c.phone} {c.email && `| ${c.email}`}</div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-            <Button
-              type="button"
-              className="ml-2 mb-1"
-              variant="outline"
-              onClick={() => setShowCustomerForm(true)}
-              disabled={showCustomerForm}
-            >
-              + Add Customer
-            </Button>
-          </div>
-        </div>
-        {showCustomerForm && (
-          <div className="mt-6">
-            <CustomerForm
-              onSubmit={(newCustomer) => {
-                const { id, createdAt, ...customerData } = newCustomer;
-                addCustomer({
-                  ...customerData,
-                  companyId: currentCompany?.id || customerData.companyId || '',
-                });
-                setCustomerName(newCustomer.name);
-                setShowCustomerForm(false);
-              }}
-              onCancel={() => setShowCustomerForm(false)}
-            />
-          </div>
-        )}
-      </Card>
+      <CustomerInfo
+        customerName={customerName}
+        onCustomerNameChange={setCustomerName}
+        onAddCustomer={addCustomer}
+      />
       
-      {/* Item Entry Form */}
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold mb-4">Add Item</h3>
-        <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
-          <div className="grid grid-cols-12 gap-3 mb-4">
-            {/* Item Selection with Search - 5 columns */}
-            <div className="col-span-12 md:col-span-5">
-              <Label htmlFor="item">Item Name</Label>
-              <Popover open={isItemPopoverOpen} onOpenChange={setIsItemPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={isItemPopoverOpen}
-                    className="w-full justify-between"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setIsItemPopoverOpen(!isItemPopoverOpen);
-                    }}
-                  >
-                    {selectedItem ? getItemDisplayDetails(selectedItem) : "Select an item"}
-                    <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[400px] p-0" align="start">
-                  <div className="p-2">
-                    <Input
-                      placeholder="Search items..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="mb-2"
-                    />
-                    <div className="max-h-[300px] overflow-auto">
-                      {filteredSearchItems.length === 0 ? (
-                        <div className="p-2 text-sm text-gray-500">No items found.</div>
-                      ) : (
-                        filteredSearchItems.map((item) => (
-                          <button
-                            key={item.id}
-                            type="button"
-                            className="w-full p-2 text-left hover:bg-gray-100 rounded-sm flex items-center"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleSelectItem(item.id);
-                              setIsItemPopoverOpen(false);
-                              setSearchTerm('');
-                            }}
-                          >
-                            <CheckIcon
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                selectedItemId === item.id ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            {getItemDisplayDetails(item)}
-                          </button>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            </div>
-            
-            <div className="col-span-6 md:col-span-2">
-              <Label htmlFor="quantity">Quantity</Label>
-              <Input
-                id="quantity"
-                type="number"
-                min="1"
-                value={quantity}
-                onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
-              />
-            </div>
-            
-            <div className="col-span-6 md:col-span-1">
-              <Label htmlFor="salesUnit">Unit</Label>
-              <Select value={salesUnit} onValueChange={setSalesUnit}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Unit" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SALES_UNITS.map((unit) => (
-                    <SelectItem key={unit} value={unit}>
-                      {unit}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="col-span-12 md:col-span-2">
-              <Label htmlFor="godown">Godown *</Label>
-              <Select 
-                value={selectedGodownId} 
-                onValueChange={setSelectedGodownId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select godown" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredGodowns && filteredGodowns.map((godown) => (
-                    <SelectItem key={godown.id} value={godown.id}>
-                      {godown.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+      <ItemEntryForm
+        onAddItem={addSaleItem}
+        companies={companies || []}
+        items={items || []}
+        filteredGodowns={filteredGodowns || []}
+      />
+      
+      <SaleItemsTable
+        items={currentSaleItems}
+        onRemoveItem={removeSaleItem}
+        onOpenDiscountDialog={openDiscountDialog}
+      />
+      
+      <CompanySummary summaries={companySummaries} />
+      
+      <SaleSummary
+        subtotal={subtotal}
+        totalDiscount={totalDiscount}
+        totalGst={totalGst}
+        grandTotal={grandTotal}
+        onCreateSale={handleCreateSale}
+        onPreviewBill={handlePreviewConsolidatedBill}
+        onClearItems={clearSaleItems}
+        isDisabled={currentSaleItems.length === 0 || !customerName || !selectedGodownId}
+      />
 
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-            <div>
-              <Label htmlFor="mrp">MRP</Label>
-              <Input
-                id="mrp"
-                type="number"
-                min="0"
-                step="0.01"
-                value={mrp}
-                onChange={(e) => handleMrpChange(parseFloat(e.target.value) || 0)}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="exclusiveCost">Excl. GST Rate</Label>
-              <Input
-                id="exclusiveCost"
-                type="number"
-                min="0"
-                step="0.01"
-                value={exclusiveCost}
-                onChange={(e) => setExclusiveCost(parseFloat(e.target.value) || 0)}
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="gstRate">GST Rate (%)</Label>
-              <Select 
-                value={gstRate.toString()} 
-                onValueChange={(value) => setGstRate(parseInt(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select GST Rate" />
-                </SelectTrigger>
-                <SelectContent>
-                  {GST_RATES.map((rate) => (
-                    <SelectItem key={rate} value={rate.toString()}>
-                      {rate}%
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <Label htmlFor="gstAmount">GST Amount</Label>
-              <Input
-                id="gstAmount"
-                type="number"
-                value={gstAmount.toFixed(2)}
-                readOnly
-                className="bg-gray-50"
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="totalAmount">Total Amount</Label>
-              <Input
-                id="totalAmount"
-                type="number"
-                value={(exclusiveCost * quantity + gstAmount).toFixed(2)}
-                readOnly
-                className="bg-gray-50"
-              />
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div>
-              <Label htmlFor="hsnCode">HSN Code</Label>
-              <Select 
-                value={hsnCode} 
-                onValueChange={setHsnCode}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select HSN Code" />
-                </SelectTrigger>
-                <SelectContent>
-                  {HSN_CODES.map((code) => (
-                    <SelectItem key={code} value={code}>
-                      {code}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-gray-500 mt-1">Optional - Required for GST items</p>
-            </div>
-            
-            <div>
-              <Label htmlFor="packagingDetails">Packaging Details</Label>
-              <Input
-                id="packagingDetails"
-                value={packagingDetails}
-                onChange={(e) => setPackagingDetails(e.target.value)}
-                placeholder="Optional details about packaging"
-                maxLength={50} // Limit length to avoid overflow on thermal slip
-              />
-              <p className="text-xs text-gray-500 mt-1">Will appear on 2nd line in Estimate bill</p>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-            <div>
-              <Label htmlFor="perUnit">Per ({salesUnit})</Label>
-              <Input
-                id="perUnit"
-                type="text"
-                value={`₹${mrp.toFixed(2)}/${salesUnit}`}
-                readOnly
-                className="bg-gray-50"
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="discount">Discount</Label>
-              <div className="flex">
-                <Input
-                  id="discount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={discount}
-                  onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                  className="rounded-r-none"
-                />
-                <Select 
-                  value={discountType} 
-                  onValueChange={(value: 'amount' | 'percentage') => setDiscountType(value)}
-                >
-                  <SelectTrigger className="w-20 rounded-l-none">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="amount">₹</SelectItem>
-                    <SelectItem value="percentage">%</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            <div className="md:col-span-3 flex items-end">
-              <Button 
-                type="button" 
-                onClick={handleAddItem}
-                className="w-full"
-                disabled={!selectedItemId || quantity <= 0}
-              >
-                <Plus size={16} className="mr-1" /> Add Item
-              </Button>
-            </div>
-          </div>
-          
-          {/* Item stock info */}
-          {selectedItem && (
-            <div className="text-xs text-gray-600 mb-4">
-              <p>In stock: {selectedItem.stockQuantity} units</p>
-            </div>
-          )}
-          
-          {/* Company-specific warnings */}
-          {currentCompany?.name === 'Mansan Laal and Sons' && (
-            <div className="flex items-center p-2 mb-4 text-amber-800 bg-amber-50 rounded border border-amber-200">
-              <AlertCircle size={16} className="mr-2" />
-              <p className="text-xs">Mansan Laal and Sons requires GST items with HSN codes only.</p>
-            </div>
-          )}
-          
-          {currentCompany?.name === 'Estimate' && (
-            <div className="flex items-center p-2 mb-4 text-blue-800 bg-blue-50 rounded border border-blue-200">
-              <AlertCircle size={16} className="mr-2" />
-              <p className="text-xs">Estimate company only accepts Non-GST items.</p>
-            </div>
-          )}
-        </form>
-      </Card>
-      
-      {/* Items Table */}
-      <Card className="p-0 overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Company</TableHead>
-              <TableHead>Item</TableHead>
-              <TableHead className="text-center">Qty</TableHead>
-              <TableHead className="text-right">MRP</TableHead>
-              <TableHead className="text-right">Excl. GST</TableHead>
-              <TableHead className="text-right">Discount</TableHead>
-              <TableHead className="text-right">GST</TableHead>
-              <TableHead className="text-right">Net Amount</TableHead>
-              <TableHead className="text-center">Action</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {currentSaleItems && currentSaleItems.length > 0 ? (
-              currentSaleItems.map((item, index) => (
-                <TableRow key={index}>
-                  <TableCell>{item.companyName}</TableCell>
-                  <TableCell>
-                    {item.name}
-                    {item.hsnCode && (
-                      <div className="text-xs text-gray-500">HSN: {item.hsnCode}</div>
-                    )}
-                    {item.packagingDetails && (
-                      <div className="text-xs text-gray-500">{item.packagingDetails}</div>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">{item.quantity} {item.salesUnit}</TableCell>
-                  <TableCell className="text-right">₹{((item.mrp || item.unitPrice) || 0).toFixed(2)}</TableCell>
-                  <TableCell className="text-right">
-                    ₹{item.unitPrice.toFixed(2)} 
-                    <div className="text-xs text-gray-500">
-                      ₹{(item.unitPrice * item.quantity).toFixed(2)}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {item.discountValue ? (
-                      <>
-                        ₹{item.discountValue.toFixed(2)}
-                        {item.discountPercentage && (
-                          <div className="text-xs text-gray-500">
-                            {item.discountPercentage}%
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      '₹0.00'
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {item.gstPercentage ? (
-                      <>
-                        {item.gstPercentage}%
-                        <div className="text-xs text-gray-500">
-                          ₹{(item.gstAmount || 0).toFixed(2)}
-                        </div>
-                      </>
-                    ) : (
-                      '0%'
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right font-medium">₹{item.totalPrice.toFixed(2)}</TableCell>
-                  <TableCell className="text-center">
-                    <div className="flex justify-center space-x-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openDiscountDialog(index)}
-                        className="h-7 w-7 text-blue-600"
-                        title="Apply Discount"
-                      >
-                        %
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeSaleItem(index)}
-                        className="h-7 w-7 text-red-500"
-                        title="Remove Item"
-                      >
-                        <Trash2 size={16} />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={9} className="text-center py-8 text-gray-500">
-                  No items added yet
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </Card>
-      
-      {/* Company-wise Summaries */}
-      {currentSaleItems && currentSaleItems.length > 0 && Object.keys(companySummaries).length > 0 && (
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Company-wise Summary</h3>
-          <div className="grid gap-4">
-            {Object.values(companySummaries).map((company, index) => (
-              <div key={index} className="border rounded-md p-4">
-                <div className="flex justify-between items-center mb-2">
-                  <h4 className="font-medium">{company.name}</h4>
-                  <span className="font-bold">₹{company.total.toFixed(2)}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-sm">
-                  <div>
-                    <span className="text-gray-500">Subtotal:</span> ₹{company.subtotal.toFixed(2)}
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Discount:</span> ₹{company.discount.toFixed(2)}
-                  </div>
-                  <div>
-                    <span className="text-gray-500">GST:</span> ₹{company.gst.toFixed(2)}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
-      
-      {/* Summary and Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <Card className="p-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="space-y-1">
-                <Label className="text-sm text-gray-600">Total Amount (Excl.)</Label>
-                <div className="font-medium">₹{subtotal.toFixed(2)}</div>
-              </div>
-              
-              <div className="space-y-1">
-                <Label className="text-sm text-gray-600">Total Discount</Label>
-                <div className="font-medium">₹{totalDiscount.toFixed(2)}</div>
-              </div>
-              
-              <div className="space-y-1">
-                <Label className="text-sm text-gray-600">Total GST</Label>
-                <div className="font-medium">₹{totalGst.toFixed(2)}</div>
-              </div>
-              
-              <div className="space-y-1">
-                <Label className="text-sm text-gray-600 font-bold">Grand Total</Label>
-                <div className="font-bold text-lg">₹{grandTotal.toFixed(2)}</div>
-              </div>
-            </div>
-          </Card>
-        </div>
-        
-        <div>
-          <Card className="p-6">
-            <div className="space-y-4">
-              <Button 
-                className="w-full"
-                size="lg"
-                disabled={currentSaleItems.length === 0 || !customerName || !selectedGodownId}
-                onClick={handleCreateSale}
-              >
-                <ShoppingCart className="mr-2 h-4 w-4" />
-                Create Bill
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={handlePreviewConsolidatedBill}
-                disabled={currentSaleItems.length === 0}
-              >
-                <FileText className="mr-2 h-4 w-4" />
-                Preview Final Bill
-              </Button>
-              
-              <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={clearSaleItems}
-                disabled={currentSaleItems.length === 0}
-              >
-                Clear All
-              </Button>
-            </div>
-          </Card>
-        </div>
-      </div>
+      <DiscountDialog
+        isOpen={isDiscountDialogOpen}
+        onClose={() => setIsDiscountDialogOpen(false)}
+        onApply={applyItemDiscount}
+        discount={dialogDiscount}
+        onDiscountChange={setDialogDiscount}
+        discountType={dialogDiscountType}
+        onDiscountTypeChange={setDialogDiscountType}
+      />
 
-      {/* Discount Dialog */}
-      <Dialog open={isDiscountDialogOpen} onOpenChange={setIsDiscountDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Apply Discount</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="discountValue">Discount Value</Label>
-              <div className="flex">
-                <Input
-                  id="discountValue"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={dialogDiscount}
-                  onChange={(e) => setDialogDiscount(parseFloat(e.target.value) || 0)}
-                  className="rounded-r-none"
-                />
-                <RadioGroup 
-                  value={dialogDiscountType} 
-                  onValueChange={(value: 'amount' | 'percentage') => setDialogDiscountType(value as any)}
-                  className="flex items-center border rounded-l-none border-l-0 p-2"
-                >
-                  <div className="flex items-center space-x-1 mr-3">
-                    <RadioGroupItem value="amount" id="amount" />
-                    <Label htmlFor="amount">₹</Label>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <RadioGroupItem value="percentage" id="percentage" />
-                    <Label htmlFor="percentage">%</Label>
-                  </div>
-                </RadioGroup>
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDiscountDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={applyItemDiscount}>Apply</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Print Modal */}
       {isPrintModalOpen && createdSale && (
         <PrintBillModal 
           isOpen={isPrintModalOpen} 
@@ -1180,101 +631,6 @@ const EnhancedSaleForm: React.FC = () => {
           sale={createdSale} 
           printType={printType}
         />
-      )}
-
-      {/* Consolidated Bill Preview */}
-      {consolidatedPreviewOpen && currentSaleItems && currentSaleItems.length > 0 && (
-        <Dialog open={consolidatedPreviewOpen} onOpenChange={setConsolidatedPreviewOpen}>
-          <DialogContent className="max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>Final Bill Preview</DialogTitle>
-            </DialogHeader>
-            <div className="max-h-[70vh] overflow-auto">
-              <div className="p-4 border rounded">
-                <div className="text-center mb-4">
-                  <h2 className="text-xl font-bold">Consolidated Bill</h2>
-                  <p>Date: {new Date().toLocaleDateString()}</p>
-                  <p>Customer: {customerName || "Guest"}</p>
-                </div>
-                
-                {/* Group items by company */}
-                {Object.values(companySummaries).map((company, index) => (
-                  <div key={index} className="mb-6">
-                    <h3 className="font-medium text-lg mb-2">{company.name}</h3>
-                    <table className="w-full text-sm">
-                      <thead className="border-b">
-                        <tr>
-                          <th className="py-1 text-left">Item</th>
-                          <th className="py-1 text-center">Qty</th>
-                          <th className="py-1 text-right">MRP</th>
-                          <th className="py-1 text-right">Disc</th>
-                          <th className="py-1 text-right">Excl.</th>
-                          <th className="py-1 text-right">GST</th>
-                          <th className="py-1 text-right">Total</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {currentSaleItems.filter(item => item.companyId === company.id).map((item, idx) => (
-                          <tr key={idx} className="border-b border-gray-200">
-                            <td className="py-1">
-                              {item.name}
-                              {item.packagingDetails && (
-                                <div className="text-xs text-gray-500">{item.packagingDetails}</div>
-                              )}
-                            </td>
-                            <td className="py-1 text-center">{item.quantity}</td>
-                            <td className="py-1 text-right">₹{((item.mrp || item.unitPrice) || 0).toFixed(2)}</td>
-                            <td className="py-1 text-right">₹{(item.discountValue || 0).toFixed(2)}</td>
-                            <td className="py-1 text-right">₹{(item.unitPrice * item.quantity).toFixed(2)}</td>
-                            <td className="py-1 text-right">₹{(item.gstAmount || 0).toFixed(2)}</td>
-                            <td className="py-1 text-right font-medium">₹{item.totalPrice.toFixed(2)}</td>
-                          </tr>
-                        ))}
-                        <tr className="font-medium">
-                          <td colSpan={6} className="py-1 text-right">Company Total:</td>
-                          <td className="py-1 text-right">₹{company.total.toFixed(2)}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                ))}
-                
-                {/* Summary */}
-                <div className="border-t pt-4 mt-4">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="text-right text-sm">
-                      <p>Total Quantity:</p>
-                      <p>Total Excl. Cost:</p>
-                      <p>Total Discount:</p>
-                      <p>Total GST:</p>
-                      <p>Round Off:</p>
-                      <p className="font-bold">Grand Total:</p>
-                    </div>
-                    <div className="text-right text-sm">
-                      <p>{currentSaleItems.reduce((sum, item) => sum + item.quantity, 0)}</p>
-                      <p>₹{subtotal.toFixed(2)}</p>
-                      <p>₹{totalDiscount.toFixed(2)}</p>
-                      <p>₹{totalGst.toFixed(2)}</p>
-                      <p>₹{(Math.round(grandTotal) - grandTotal).toFixed(2)}</p>
-                      <p className="font-bold">₹{Math.round(grandTotal).toFixed(2)}</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="text-center mt-6 text-sm">
-                  <p>Thank you for your business!</p>
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setConsolidatedPreviewOpen(false)}>Close</Button>
-              <Button onClick={handleCreateSale}>
-                <Printer className="mr-2 h-4 w-4" />
-                Create & Print Bill
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       )}
     </div>
   );
