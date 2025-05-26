@@ -186,19 +186,18 @@ const EnhancedSaleForm: React.FC = () => {
       if (item) {
         setSelectedItem(item);
         // Set GST rate based on company and item
-        const itemGstRate = item.type === 'GST' ? (item.gstPercentage || 0) : 0;
-        setGstRate(itemGstRate);
-        setHsnCode(item.hsnCode || '');
-        if (itemGstRate > 0) {
+        setGstRate(item.gstPercentage || 0);
+        setHsnCode(item.hsn || '');
+        if (item.gstPercentage > 0) {
           if (item.mrp) {
             setMrp(item.mrp);
-            const calculatedExclusiveCost = calculateExclusiveCost(item.mrp, itemGstRate);
+            const calculatedExclusiveCost = calculateExclusiveCost(item.mrp, item.gstPercentage);
             setExclusiveCost(calculatedExclusiveCost);
             const calculatedGstAmount = item.mrp - calculatedExclusiveCost;
             setGstAmount(calculatedGstAmount * quantity);
           } else {
             setExclusiveCost(item.unitPrice);
-            const calculatedMrp = calculateMRP(item.unitPrice, itemGstRate);
+            const calculatedMrp = calculateMRP(item.unitPrice, item.gstPercentage);
             setMrp(calculatedMrp);
             const calculatedGstAmount = calculatedMrp - item.unitPrice;
             setGstAmount(calculatedGstAmount * quantity);
@@ -510,7 +509,7 @@ const EnhancedSaleForm: React.FC = () => {
         <div className="flex items-center justify-between">
           <span className="font-semibold">
             {item.name}
-            {item.type === 'GST' && item.gstPercentage ? ` (GST: ${item.gstPercentage}%)` : ''} - ₹{item.unitPrice}
+            {item.gstPercentage ? ` (GST: ${item.gstPercentage}%)` : ''} - ₹{item.unitPrice}
           </span>
           {/* Bulk pricing link if available */}
           {hasBulkPrices && (

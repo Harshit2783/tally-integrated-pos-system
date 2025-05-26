@@ -33,7 +33,7 @@ export interface Item {
   unitPrice: number;
   mrp?: number;
   gstPercentage?: number;
-  hsn?: number;  
+  hsn?: string;  
   // godownId: string;
   godown : string,
   stockQuantity: number;

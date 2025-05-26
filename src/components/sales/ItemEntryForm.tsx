@@ -11,6 +11,8 @@ import { cn } from "@/lib/utils";
 import { Item, SaleItem } from '../../types';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useInventory } from '../../contexts/InventoryContext';
+import { toast } from 'sonner';
+import { calculateExclusiveCost, calculateMRP, calculateGstAmount } from '../../utils/pricingUtils';
 
 // Define sales units
 const SALES_UNITS = ['Case', 'Packet', 'Piece'];
@@ -66,9 +68,9 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
         setSelectedItem(item);
         // Set GST rate based on company and item
         const itemGstRate = item.type === 'GST' ? (item.gstPercentage || 0) : 0;
-        setGstRate(itemGstRate);
-        setHsnCode(item.hsnCode || '');
-        if (itemGstRate > 0) {
+        // setGstRate(itemGstRate);
+        // setHsnCode(String(item.hsn || ''));
+        if (item.gstPercentage > 0) {
           if (item.mrp) {
             setMrp(item.mrp);
             const calculatedExclusiveCost = calculateExclusiveCost(item.mrp, itemGstRate);
@@ -305,7 +307,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
               </SelectContent>
             </Select>
           </div>
-          <div className="col-span-12 md:col-span-2">
+          {/* <div className="col-span-12 md:col-span-2">
             <Label htmlFor="godown">Godown *</Label>
             <Select 
               value={selectedGodownId} 
@@ -322,7 +324,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </div> */}
         </div>
 
         <div className="grid grid-cols-1 md:col-span-5 gap-4 mb-6">

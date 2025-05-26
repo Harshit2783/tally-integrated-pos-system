@@ -1,10 +1,10 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Sale, SaleItem } from '../types';
 import { sales as mockSales, generateId, generateBillNumber } from '../data/mockData';
 import { useCompany } from './CompanyContext';
 import { useInventory } from './InventoryContext';
 import { toast } from 'sonner';
+import { formatInventoryItemForBilling } from '../utils/inventoryUtils';
 
 interface SalesContextType {
   sales: Sale[];
@@ -53,26 +53,29 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const addSaleItem = (saleItem: SaleItem) => {
     try {
+      // Format the item for billing
+      const formattedItem = formatInventoryItemForBilling(saleItem);
+      
       // Validate company-specific rules
-      if (saleItem.companyName === 'Mansan Laal and Sons' && !saleItem.gstPercentage) {
+      if (formattedItem.companyName === 'Mansan Laal and Sons' && !formattedItem.gstPercentage) {
         toast.error('Mansan Laal and Sons requires GST items only');
         return;
       }
       
-      if (saleItem.companyName === 'Estimate' && saleItem.gstPercentage) {
+      if (formattedItem.companyName === 'Estimate' && formattedItem.gstPercentage) {
         toast.error('Estimate company only accepts Non-GST items');
         return;
       }
       
       // HSN code validation for GST items of Mansan Laal
-      if (saleItem.companyName === 'Mansan Laal and Sons' && !saleItem.hsnCode) {
+      if (formattedItem.companyName === 'Mansan Laal and Sons' && !formattedItem.hsnCode) {
         toast.error('HSN Code is required for Mansan Laal and Sons items');
         return;
       }
       
       // Check if item already exists in current sale items with the same company
       const existingItemIndex = currentSaleItems.findIndex(
-        item => item.itemId === saleItem.itemId && item.companyId === saleItem.companyId
+        item => item.itemId === formattedItem.itemId && item.companyId === formattedItem.companyId
       );
       
       if (existingItemIndex !== -1) {
@@ -80,12 +83,12 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         const updatedItems = [...currentSaleItems];
         const existingItem = updatedItems[existingItemIndex];
         
-        const newQuantity = existingItem.quantity + saleItem.quantity;
-        const newTotalPrice = saleItem.unitPrice * newQuantity;
+        const newQuantity = existingItem.quantity + formattedItem.quantity;
+        const newTotalPrice = formattedItem.unitPrice * newQuantity;
         let newGstAmount = 0;
         
-        if (saleItem.gstPercentage) {
-          newGstAmount = (saleItem.unitPrice * newQuantity * saleItem.gstPercentage) / 100;
+        if (formattedItem.gstPercentage) {
+          newGstAmount = (formattedItem.unitPrice * newQuantity * formattedItem.gstPercentage) / 100;
         }
         
         updatedItems[existingItemIndex] = {
@@ -99,7 +102,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         setCurrentSaleItems(updatedItems);
       } else {
         // Add new item
-        setCurrentSaleItems(prev => [...prev, saleItem]);
+        setCurrentSaleItems(prev => [...prev, formattedItem]);
       }
     } catch (error) {
       console.error("Error adding sale item:", error);
