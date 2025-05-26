@@ -73,7 +73,7 @@ const EnhancedSaleForm: React.FC = () => {
   const [discountType, setDiscountType] = useState<'amount' | 'percentage'>('amount');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [isItemPopoverOpen, setIsItemPopoverOpen] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Discount dialog state
   const [isDiscountDialogOpen, setIsDiscountDialogOpen] = useState<boolean>(false);
@@ -98,6 +98,7 @@ const EnhancedSaleForm: React.FC = () => {
 
   // Add this near the top of the component, after state declarations:
   const itemsToShow = items;
+  console.log(itemsToShow);
 
   // Restore hsnCode and packagingDetails state
   const [hsnCode, setHsnCode] = useState<string>('');
@@ -164,11 +165,11 @@ const EnhancedSaleForm: React.FC = () => {
 
   // Set loading state
   useEffect(() => {
-    const hasCompanies = companies && companies.length > 0;
+    // const hasCompanies = companies && companies.length > 0;
     const hasItems = items && items.length > 0;
-    const hasGodowns = filteredGodowns && filteredGodowns.length > 0;
+    // const hasGodowns = filteredGodowns && filteredGodowns.length > 0;
     
-    setIsLoading(!(hasCompanies && hasItems && hasGodowns));
+    setIsLoading(!(hasItems));
   }, [companies, items, filteredGodowns]);
 
   // Initialize godown selection

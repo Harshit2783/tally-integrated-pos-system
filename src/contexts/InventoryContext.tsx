@@ -39,6 +39,20 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
   //fetch items from backend
   //api calling
   useEffect(()=>{
+    const cached = localStorage.getItem('items')
+    if(cached)
+    {
+      setItems(JSON.parse(cached))
+    }
+
+    else 
+    {
+      fetchItems()
+    }
+  },[]//runs on single mount
+  );  
+
+
     const fetchItems = async()=>{
       try{
         const result  = await axios.post('/api/tally/stocks/fetch-items');
@@ -59,11 +73,13 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
 
           // HSN : item.HSN
           
-          
+        
         })
+        
       )
 
       setItems(mappedItems)
+      localStorage.setItem('items',JSON.stringify(mappedItems))
 
         
         
@@ -77,8 +93,7 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
       }
     };
 
-    fetchItems()
-  },[])
+    
 
 
 
