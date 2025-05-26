@@ -16,6 +16,7 @@ import { Edit2, Trash2, RotateCcw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import ReturnItemForm from './ReturnItemForm';
 import { useCompany } from '../../contexts/CompanyContext';
+import Loader from '../ui/loader';
 
 interface ItemListProps {
   onEdit: (item: Item) => void;
@@ -159,7 +160,7 @@ const ItemList: React.FC<ItemListProps> = ({ onEdit, onDelete, companyId }) => {
               ) : (
                 <TableRow>
                   <TableCell colSpan={12} className="text-center py-8">
-                    No items found
+                      <Loader />
                   </TableCell>
                 </TableRow>
               )}

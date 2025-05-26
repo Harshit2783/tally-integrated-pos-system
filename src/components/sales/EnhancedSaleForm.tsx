@@ -28,6 +28,8 @@ import SaleItemsTable from './SaleItemsTable';
 import CompanySummary from './CompanySummary';
 import SaleSummary from './SaleSummary';
 import DiscountDialog from './DiscountDialog';
+import Loader from '../ui/loader';
+
 
 // Define sales units
 const SALES_UNITS = ['Case', 'Packet', 'Piece'];
@@ -67,7 +69,6 @@ const EnhancedSaleForm: React.FC = () => {
   const [salesUnit, setSalesUnit] = useState<string>('Piece');
   const [mrp, setMrp] = useState<number>(0);
   const [exclusiveCost, setExclusiveCost] = useState<number>(0);
-  const [gstRate, setGstRate] = useState<number>(0);
   const [gstAmount, setGstAmount] = useState<number>(0);
   const [discount, setDiscount] = useState<number>(0);
   const [discountType, setDiscountType] = useState<'amount' | 'percentage'>('amount');
@@ -101,7 +102,6 @@ const EnhancedSaleForm: React.FC = () => {
   console.log(itemsToShow);
 
   // Restore hsnCode and packagingDetails state
-  const [hsnCode, setHsnCode] = useState<string>('');
   const [packagingDetails, setPackagingDetails] = useState<string>('');
 
   // Add state for customer suggestions popover
@@ -159,7 +159,7 @@ const EnhancedSaleForm: React.FC = () => {
     return itemsToShow.filter(item =>
       (item.name && item.name.toLowerCase().includes(lowerSearchTerm)) ||
       (item.itemId && item.itemId.toLowerCase().includes(lowerSearchTerm)) ||
-      (item.hsnCode && item.hsnCode.toLowerCase().includes(lowerSearchTerm))
+      (item.hsn && item.hsn.toLowerCase().includes(lowerSearchTerm))
     );
   }, [searchTerm, itemsToShow]);
 
@@ -186,19 +186,18 @@ const EnhancedSaleForm: React.FC = () => {
       if (item) {
         setSelectedItem(item);
         // Set GST rate based on company and item
-        const itemGstRate = item.type === 'GST' ? (item.gstPercentage || 0) : 0;
-        setGstRate(itemGstRate);
-        setHsnCode(item.hsnCode || '');
-        if (itemGstRate > 0) {
+       
+
+        if (item.gstPercentage > 0) {
           if (item.mrp) {
             setMrp(item.mrp);
-            const calculatedExclusiveCost = calculateExclusiveCost(item.mrp, itemGstRate);
+            const calculatedExclusiveCost = calculateExclusiveCost(item.mrp, item.gstPercentage);
             setExclusiveCost(calculatedExclusiveCost);
             const calculatedGstAmount = item.mrp - calculatedExclusiveCost;
             setGstAmount(calculatedGstAmount * quantity);
           } else {
             setExclusiveCost(item.unitPrice);
-            const calculatedMrp = calculateMRP(item.unitPrice, itemGstRate);
+            const calculatedMrp = calculateMRP(item.unitPrice, item.);
             setMrp(calculatedMrp);
             const calculatedGstAmount = calculatedMrp - item.unitPrice;
             setGstAmount(calculatedGstAmount * quantity);
@@ -575,10 +574,10 @@ const EnhancedSaleForm: React.FC = () => {
   // Loading state
   if (isLoading) {
     return (
-      <Card className="p-6 text-center">
-        <p>Loading sales form...</p>
-      </Card>
-    );
+      <Loader />
+   
+    )
+
   }
 
   return (

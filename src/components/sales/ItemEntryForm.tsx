@@ -12,6 +12,7 @@ import { Item, SaleItem } from '../../types';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useInventory } from '../../contexts/InventoryContext';
 
+
 // Define sales units
 const SALES_UNITS = ['Case', 'Packet', 'Piece'];
 
@@ -28,7 +29,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
   items,
   filteredGodowns,
 }) => {
-  const { currentCompany } = useCompany();
+  const {currentCompany } = useCompany();
   const [selectedItemId, setSelectedItemId] = useState<string>('');
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
@@ -36,13 +37,11 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
   const [salesUnit, setSalesUnit] = useState<string>('Piece');
   const [mrp, setMrp] = useState<number>(0);
   const [exclusiveCost, setExclusiveCost] = useState<number>(0);
-  const [gstRate, setGstRate] = useState<number>(0);
   const [gstAmount, setGstAmount] = useState<number>(0);
   const [discount, setDiscount] = useState<number>(0);
   const [discountType, setDiscountType] = useState<'amount' | 'percentage'>('amount');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [isItemPopoverOpen, setIsItemPopoverOpen] = useState<boolean>(false);
-  const [hsnCode, setHsnCode] = useState<string>('');
   const [packagingDetails, setPackagingDetails] = useState<string>('');
 
   // Filter items based on search
@@ -53,8 +52,8 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
     const lowerSearchTerm = searchTerm.toLowerCase();
     return items.filter(item =>
       (item.name && item.name.toLowerCase().includes(lowerSearchTerm)) ||
-      (item.itemId && item.itemId.toLowerCase().includes(lowerSearchTerm)) ||
-      (item.hsnCode && item.hsnCode.toLowerCase().includes(lowerSearchTerm))
+      (item.itemId && item.itemId.toLowerCase().includes(lowerSearchTerm)) 
+   
     );
   }, [searchTerm, items]);
 
@@ -65,10 +64,8 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
       if (item) {
         setSelectedItem(item);
         // Set GST rate based on company and item
-        const itemGstRate = item.type === 'GST' ? (item.gstPercentage || 0) : 0;
-        setGstRate(itemGstRate);
-        setHsnCode(item.hsnCode || '');
-        if (itemGstRate > 0) {
+     
+        if (item.gstPercentage > 0) {
           if (item.mrp) {
             setMrp(item.mrp);
             const calculatedExclusiveCost = calculateExclusiveCost(item.mrp, itemGstRate);
