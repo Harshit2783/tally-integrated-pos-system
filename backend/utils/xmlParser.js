@@ -1,5 +1,6 @@
 import { parseStringPromise } from "xml2js";
 
+
 export async function parseTallyXMLtoJSON(xmlString) {
   try {
     const result = await parseStringPromise(xmlString, {
@@ -12,3 +13,5 @@ export async function parseTallyXMLtoJSON(xmlString) {
     throw new Error('Failed to parse XML');
   }
 }
+
+

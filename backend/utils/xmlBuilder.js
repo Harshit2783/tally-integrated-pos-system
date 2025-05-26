@@ -11,8 +11,8 @@ export function buildTallyXML({requestType,reportName,companyName}){
                 <STATICVARIABLES>
                     <SVCURRENTCOMPANY>${companyName}</SVCURRENTCOMPANY>
                     <EXPLODEFLAG>Yes</EXPLODEFLAG>
-                    <ISDETAILEDBYQUANTITY>Yes</ISDETAILEDBYQUANTITY>
-                    <SHOWPROFITFLAG>Yes</SHOWPROFITFLAG>
+                    <ISITEMWISE>Yes</ISITEMWISE>
+                    <DSPPRIMARYGROUP>All Items</DSPPRIMARYGROUP>
                 </STATICVARIABLES>
             </REQUESTDESC>
         </EXPORTDATA>
