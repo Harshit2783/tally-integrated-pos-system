@@ -26,7 +26,7 @@ export interface Godown {
 export interface Item {
   // id: string;
   company: string;
-  companyId : number
+  companyId : string
   itemId: string;
   name: string;
   // type: 'GST' | 'NON-GST';

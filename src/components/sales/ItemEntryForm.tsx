@@ -30,21 +30,21 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
   items,
   filteredGodowns,
 }) => {
-  const { currentCompany } = useCompany();
-  const [selectedItemId, setSelectedItemId] = useState<string>('');
+  const [company,setCompany] = useState<string>('');
+  const [selectedItemName, setSelectedItemName] = useState<string>('');
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
   const [selectedGodownId, setSelectedGodownId] = useState<string>('');
   const [salesUnit, setSalesUnit] = useState<string>('Piece');
   const [mrp, setMrp] = useState<number>(0);
+  const [gstRate,setGstRate] = useState<number>(0)
+  const [hsnCode,setHsnCode] = useState<string>('')
   const [exclusiveCost, setExclusiveCost] = useState<number>(0);
-  const [gstRate, setGstRate] = useState<number>(0);
   const [gstAmount, setGstAmount] = useState<number>(0);
   const [discount, setDiscount] = useState<number>(0);
   const [discountType, setDiscountType] = useState<'amount' | 'percentage'>('amount');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [isItemPopoverOpen, setIsItemPopoverOpen] = useState<boolean>(false);
-  const [hsnCode, setHsnCode] = useState<string>('');
   const [packagingDetails, setPackagingDetails] = useState<string>('');
 
   // Filter items based on search
@@ -55,31 +55,32 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
     const lowerSearchTerm = searchTerm.toLowerCase();
     return items.filter(item =>
       (item.name && item.name.toLowerCase().includes(lowerSearchTerm)) ||
-      (item.itemId && item.itemId.toLowerCase().includes(lowerSearchTerm)) ||
-      (item.hsnCode && item.hsnCode.toLowerCase().includes(lowerSearchTerm))
+      (item.itemId && item.itemId.toLowerCase().includes(lowerSearchTerm)) 
+   
     );
   }, [searchTerm, items]);
 
   // Update item details when item selection changes
   React.useEffect(() => {
-    if (selectedItemId && items && items.length > 0) {
-      const item = items.find((item) => item.id === selectedItemId);
+    if (items && items.length > 0) {
+      const item = items.find((item) => item.name === selectedItemName);
       if (item) {
         setSelectedItem(item);
         // Set GST rate based on company and item
-        const itemGstRate = item.type === 'GST' ? (item.gstPercentage || 0) : 0;
-        // setGstRate(itemGstRate);
-        // setHsnCode(String(item.hsn || ''));
+        // const itemGstRate = item.type === 'GST' ? (item.gstPercentage || 0) : 0;
+        setGstRate(item.gstPercentage);
+        setHsnCode(item.hsn);
+        setCompany(item.company)
         if (item.gstPercentage > 0) {
           if (item.mrp) {
             setMrp(item.mrp);
-            const calculatedExclusiveCost = calculateExclusiveCost(item.mrp, itemGstRate);
+            const calculatedExclusiveCost = calculateExclusiveCost(item.mrp, item.gstPercentage);
             setExclusiveCost(calculatedExclusiveCost);
             const calculatedGstAmount = item.mrp - calculatedExclusiveCost;
             setGstAmount(calculatedGstAmount * quantity);
           } else {
             setExclusiveCost(item.unitPrice);
-            const calculatedMrp = calculateMRP(item.unitPrice, itemGstRate);
+            const calculatedMrp = calculateMRP(item.unitPrice, item.gstPercentage);
             setMrp(calculatedMrp);
             const calculatedGstAmount = calculatedMrp - item.unitPrice;
             setGstAmount(calculatedGstAmount * quantity);
@@ -93,34 +94,36 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
         setSelectedItem(null);
         setMrp(0);
         setExclusiveCost(0);
-        setGstRate(0);
+        // setGstRate(0);
         setGstAmount(0);
-        setHsnCode('');
+        // setHsnCode('');
       }
     } else {
       setSelectedItem(null);
       setMrp(0);
       setExclusiveCost(0);
-      setGstRate(0);
+      // setGstRate(0);
       setGstAmount(0);
-      setHsnCode('');
+      // setHsnCode('');
     }
-  }, [selectedItemId, items, quantity]);
+  }, [selectedItemName, items, quantity]);
+
+
 
   // Handle MRP change
-  const handleMrpChange = (value: number) => {
-    setMrp(value);
-    if (gstRate > 0) {
-      const newExclusiveCost = calculateExclusiveCost(value, gstRate);
-      setExclusiveCost(newExclusiveCost);
+  // const handleMrpChange = (value: number) => {
+  //   setMrp(value);
+  //   if ( > 0) {
+  //     const newExclusiveCost = calculateExclusiveCost(value, gstRate);
+  //     setExclusiveCost(newExclusiveCost);
       
-      const newGstAmount = value - newExclusiveCost;
-      setGstAmount(newGstAmount * quantity);
-    } else {
-      setExclusiveCost(value);
-      setGstAmount(0);
-    }
-  };
+  //     const newGstAmount = value - newExclusiveCost;
+  //     setGstAmount(newGstAmount * quantity);
+  //   } else {
+  //     setExclusiveCost(value);
+  //     setGstAmount(0);
+  //   }
+  // };
 
   // Handle adding item to bill
   const handleAddItem = () => {
@@ -152,9 +155,9 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
     const totalPrice = discountedBaseAmount + itemGstAmount;
     const itemCompany = companies?.find(c => c.id === selectedItem.companyId);
     const saleItem: SaleItem = {
-      itemId: selectedItem.id,
+      itemId: '1',
       companyId: selectedItem.companyId,
-      companyName: itemCompany ? itemCompany.name : 'Unknown Company',
+      companyName : company,
       name: selectedItem.name,
       quantity,
       unitPrice: exclusiveCost,
@@ -171,7 +174,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
     };
     try {
       onAddItem(saleItem);
-      setSelectedItemId('');
+      setSelectedItemName('');
       setSelectedItem(null);
       setQuantity(1);
       setDiscount(0);
@@ -192,14 +195,14 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
         <div className="flex items-center justify-between">
           <span className="font-semibold">
             {item.name}
-            {item.type === 'GST' && item.gstPercentage ? ` (GST: ${item.gstPercentage}%)` : ''} - ₹{item.unitPrice}
+            {item.gstPercentage ? ` (GST: ${item.gstPercentage}%)` : ''} - ₹{item.unitPrice}
           </span>
           {hasBulkPrices && (
             <span className="text-xs text-blue-600 ml-2">[Bulk pricing available]</span>
           )}
         </div>
         <div className="text-xs text-gray-600">
-          {company ? company.name : 'Unknown Company'} | In stock: {item.stockQuantity} {item.salesUnit}
+          {item.company} | In stock: {item.stockQuantity} {item.salesUnit}
         </div>
         {hasBulkPrices && (
           <div className="text-xs text-gray-500 mt-1 flex flex-wrap gap-2">
@@ -236,9 +239,11 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
                     setIsItemPopoverOpen(!isItemPopoverOpen);
                   }}
                 >
-                  {selectedItem ? getItemDisplayDetails(selectedItem) : "Select an item"}
+                  {selectedItem ? selectedItemName : "Select an item"}
                   <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
+
+                {/* to select item */}
               </PopoverTrigger>
               <PopoverContent className="w-[400px] p-0" align="start">
                 <div className="p-2">
@@ -254,13 +259,13 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
                     ) : (
                       filteredSearchItems.map((item) => (
                         <button
-                          key={item.id}
+                          // key={item.id}
                           type="button"
                           className="w-full p-2 text-left hover:bg-gray-100 rounded-sm flex items-center"
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            setSelectedItemId(item.id);
+                            setSelectedItemName(item.name);
                             setIsItemPopoverOpen(false);
                             setSearchTerm('');
                           }}
@@ -268,7 +273,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
                           <CheckIcon
                             className={cn(
                               "mr-2 h-4 w-4",
-                              selectedItemId === item.id ? "opacity-100" : "opacity-0"
+                              selectedItemName === item.name ? "opacity-100" : "opacity-0"
                             )}
                           />
                           {getItemDisplayDetails(item)}
@@ -336,7 +341,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
               min="0"
               step="0.01"
               value={mrp}
-              onChange={(e) => handleMrpChange(parseFloat(e.target.value) || 0)}
+              // onChange={(e) => handleMrpChange(parseFloat(e.target.value) || 0)}
             />
           </div>
           
@@ -417,7 +422,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
             <Input
               id="perUnit"
               type="text"
-              value={`₹${mrp.toFixed(2)}/${salesUnit}`}
+              value={`₹${mrp}/${salesUnit}`}
               readOnly
               className="bg-gray-50"
             />
@@ -455,7 +460,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
               type="button" 
               onClick={handleAddItem}
               className="w-full"
-              disabled={!selectedItemId || quantity <= 0}
+              disabled={!selectedItemName || quantity <= 0}
             >
               <Plus size={16} className="mr-1" /> Add Item
             </Button>
@@ -470,14 +475,14 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
         )}
         
         {/* Company-specific warnings */}
-        {currentCompany?.name === 'Mansan Laal and Sons' && (
+        {company === 'Mansan Laal and Sons' && (
           <div className="flex items-center p-2 mb-4 text-amber-800 bg-amber-50 rounded border border-amber-200">
             <AlertCircle size={16} className="mr-2" />
             <p className="text-xs">Mansan Laal and Sons requires GST items with HSN codes only.</p>
           </div>
         )}
         
-        {currentCompany?.name === 'Estimate' && (
+        {company === 'Estimate' && (
           <div className="flex items-center p-2 mb-4 text-blue-800 bg-blue-50 rounded border border-blue-200">
             <AlertCircle size={16} className="mr-2" />
             <p className="text-xs">Estimate company only accepts Non-GST items.</p>

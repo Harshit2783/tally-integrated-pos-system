@@ -18,7 +18,7 @@ const calculateGST = (price: number, quantity: number, gstPercentage: number) =>
 
 const SaleEntryForm: React.FC = () => {
   const { currentCompany } = useCompany();
-  const { filteredItems, filteredGodowns } = useInventory();
+  // const { filteredItems, filteredGodowns } = useInventory();
   const { addSaleItem, currentSaleItems, removeSaleItem, createSale, clearSaleItems } = useSales();
 
   const [selectedItemId, setSelectedItemId] = useState<string>('');

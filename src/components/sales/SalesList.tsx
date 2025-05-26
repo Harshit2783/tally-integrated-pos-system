@@ -4,12 +4,13 @@ import { Sale } from '../../types';
 import { useInventory } from '../../contexts/InventoryContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Calendar, ShoppingCart, FileText, Printer, Download } from 'lucide-react';
+import { Calendar, ShoppingCart, FileText, Printer, Download, Loader } from 'lucide-react';
 import { format } from 'date-fns';
 import { generateTallyXML, pushToTally } from '../../utils/tallyUtils';
 import { useCompany } from '../../contexts/CompanyContext';
 import { toast } from 'sonner';
 import { PrintBillModal } from './PrintBillModal';
+import Loaders from '../ui/loader';
 
 const SalesList: React.FC = () => {
   const { filteredSales } = useSales();
@@ -78,7 +79,8 @@ const SalesList: React.FC = () => {
   if (isLoading) {
     return (
       <Card className="p-6 text-center">
-        <p className="text-gray-500">Loading sales data...</p>
+        <Loaders />
+        
       </Card>
     );
   }

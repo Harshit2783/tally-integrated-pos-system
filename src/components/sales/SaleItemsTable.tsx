@@ -47,17 +47,17 @@ const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
                   )}
                 </TableCell>
                 <TableCell className="text-center">{item.quantity} {item.salesUnit}</TableCell>
-                <TableCell className="text-right">₹{((item.mrp || item.unitPrice) || 0).toFixed(2)}</TableCell>
+                <TableCell className="text-right">₹{((item.mrp || item.unitPrice) || 0)}</TableCell>
                 <TableCell className="text-right">
-                  ₹{item.unitPrice.toFixed(2)} 
+                  ₹{Number(item.unitPrice).toFixed(2)} 
                   <div className="text-xs text-gray-500">
-                    ₹{(item.unitPrice * item.quantity).toFixed(2)}
+                    ₹{Number((item.unitPrice * item.quantity)).toFixed(2)}
                   </div>
                 </TableCell>
                 <TableCell className="text-right">
                   {item.discountValue ? (
                     <>
-                      ₹{item.discountValue.toFixed(2)}
+                      ₹{Number(item.discountValue).toFixed(2)}
                       {item.discountPercentage && (
                         <div className="text-xs text-gray-500">
                           {item.discountPercentage}%
@@ -80,7 +80,7 @@ const SaleItemsTable: React.FC<SaleItemsTableProps> = ({
                     '0%'
                   )}
                 </TableCell>
-                <TableCell className="text-right font-medium">₹{item.totalPrice.toFixed(2)}</TableCell>
+                <TableCell className="text-right font-medium">₹{Number(item.totalPrice).toFixed(2)}</TableCell>
                 <TableCell className="text-center">
                   <div className="flex justify-center space-x-1">
                     <Button

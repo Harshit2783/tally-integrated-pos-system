@@ -84,13 +84,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             </button>
           </div>
 
-          {/* Company Selection */}
-          <div className="p-4 border-b border-blue-900">
-            <div className="text-sm text-blue-200">Current Company</div>
-            <div className="font-medium text-lg truncate">
-              {currentCompany ? currentCompany.name : 'Select a company'}
-            </div>
-          </div>
 
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto p-4">
