@@ -1,56 +1,43 @@
+import { extractMRP } from "./extractMRP.js";
+
 export function stocksXMLCleaner(parsedData, companyName) {
     const itemNames = parsedData.ENVELOPE.DSPACCNAME || [];
     const stockInfos = parsedData.ENVELOPE.DSPSTKINFO || [];
     const godownInfos = parsedData.ENVELOPE.SSBATCHNAME || [];
 
+
+
     const stockItems = [];
 
-    let stockIndex = 0;
+    
 
     for (let i = 0; i < itemNames.length; i++) {
+        let stockIndex = i*2;
         const name = itemNames[i]?.DSPDISPNAME ?? '';
+        const parsedMRP = extractMRP(name);
         const baseInfo = stockInfos[stockIndex];
+
 
         const item = {
             itemName: name,
             HSN: baseInfo?.DSPHSNVAL ?? '',
             GST: baseInfo?.DSPGSTVAL?.DSPGSTPERCVAL ?? '',
-            MRP: baseInfo?.DSPMRPVAL ?? '',
+            MRP: parsedMRP,
             rate: baseInfo?.DSPSTKCL?.DSPCLRATE ?? '',
             company: companyName,
             rateAfterGST: baseInfo?.DSPRATEAFTERGSTVAL ?? '',
             totalQuantity: baseInfo?.DSPSTKCL?.DSPCLQTY ?? '',
-            locations: []
+            godown : godownInfos[i]?.SSGODOWN ?? ''
         };
 
-        stockIndex++;
+        stockItems.push(item)
 
     //for each godown     
-    while (
-      stockIndex < stockInfos.length &&
-      godownIndex < godownInfos.length
-    ) {
-      // Detect next item by checking if DSPHSNVAL exists for this stockInfo
-      const isNextItem = stockInfos[stockIndex]?.DSPHSNVAL !== undefined;
-
-      if (isNextItem) break;
-
-      const quantity = stockInfos[stockIndex]?.DSPSTKCL?.DSPCLQTY ?? '';
-      const godown = godownInfos[godownIndex]?.SSGODOWN ?? 'Unknown';
-
-      item.locations.push({
-        godown : godown,
-        quantity : quantity
-      });
-
-      stockIndex++;
-      godownIndex++;
     }
 
-    stockItems.push(item);
-  }
 
-  return stockItems;
+    return stockItems;
+
 }
 
 

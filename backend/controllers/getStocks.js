@@ -30,15 +30,15 @@ export async function getStocks(req,res){
 
         const resultString = await result.text();
         const stocksJSON = await parseTallyXMLtoJSON(resultString);
-        console.log(stocksJSON);
+        // console.log(stocksJSON);
         //converting into readable json to send to frontend
 
         
-        // const refinedItems = stocksXMLCleaner(stocksJSON,`ManSan Raj Traders`);
+        const refinedItems = stocksXMLCleaner(stocksJSON,`ManSan Raj Traders`);
 
 
         // res.status(200).json(refinedItems)
-        res.status(200).json(stocksJSON)
+        res.status(200).json(refinedItems)
 
         
 

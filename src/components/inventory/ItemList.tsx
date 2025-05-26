@@ -39,42 +39,41 @@ const ItemList: React.FC<ItemListProps> = ({ onEdit, onDelete, companyId }) => {
     } else {
       displayItems = getAllItems();
     }
-    
     setFilteredItems(displayItems);
   }, [companyId, items, getAllItems]);
 
   // Filter items when search term or items change
-  useEffect(() => {
-    let displayItems: Item[];
+  // useEffect(() => {
+  //   let displayItems: Item[];
     
-    if (companyId) {
-      displayItems = items.filter(item => item.companyId === companyId);
-    } else {
-      displayItems = getAllItems();
-    }
+  //   if (companyId) {
+  //     displayItems = items.filter(item => item.companyId === companyId);
+  //   } else {
+  //     displayItems = getAllItems();
+  //   }
     
-    const filtered = displayItems.filter((item) =>
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.itemId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getCompanyName(item.companyId).toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // const filtered = displayItems.filter((item) =>
+    //   item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    //   item.itemId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    //   getCompanyName(item.companyId).toLowerCase().includes(searchTerm.toLowerCase())
+    // );
     
-    setFilteredItems(filtered);
-  }, [searchTerm, items, companyId, companies, getAllItems]);
+  //   setFilteredItems(filtered);
+  // }, [searchTerm, items, companyId, companies, getAllItems]);
 
-  const getGodownName = (godownId: string) => {
-    const godown = godowns.find(g => g.id === godownId);
-    return godown ? godown.name : 'Unknown';
-  };
+  // const getGodownName = (godownId: string) => {
+  //   const godown = godowns.find(g => g.id === godownId);
+  //   return godown ? godown.name : 'Unknown';
+  // };
   
-  const getCompanyName = (companyId: string) => {
-    const company = companies.find(c => c.id === companyId);
-    return company ? company.name : 'Unknown';
-  };
+  // const getCompanyName = (companyId: string) => {
+  //   const company = companies.find(c => c.id === companyId);
+  //   return company ? company.name : 'Unknown';
+  // };
 
-  const handleReturnItem = (itemId: string) => {
-    setReturningItem(itemId);
-  };
+  // const handleReturnItem = (itemId: string) => {
+  //   setReturningItem(itemId);
+  // };
 
   return (
     <>
@@ -99,10 +98,10 @@ const ItemList: React.FC<ItemListProps> = ({ onEdit, onDelete, companyId }) => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Item ID</TableHead>
+                {/* <TableHead>Item ID</TableHead> */}
                 <TableHead>Name</TableHead>
                 <TableHead>Company</TableHead>
-                <TableHead>Type</TableHead>
+                {/* <TableHead>Type</TableHead> */}
                 <TableHead>Unit Price</TableHead>
                 <TableHead>MRP</TableHead>
                 <TableHead>GST %</TableHead>
@@ -110,25 +109,25 @@ const ItemList: React.FC<ItemListProps> = ({ onEdit, onDelete, companyId }) => {
                 {/* <TableHead>Sales Unit</TableHead> */}
                 <TableHead>Godown</TableHead>
                 <TableHead>Stock</TableHead>
-                <TableHead>Actions</TableHead>
+                {/* <TableHead>Actions</TableHead> */}
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredItems.length > 0 ? (
                 filteredItems.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell>{item.itemId}</TableCell>
+                  <TableRow >
+                    {/* <TableCell>{item.itemId}</TableCell> */}
                     <TableCell>{item.name}</TableCell>
-                    <TableCell>{`ManSan Raj Traders`}</TableCell>
-                    <TableCell>{item.type}</TableCell>
+                    <TableCell>{item.company}</TableCell>
+                    {/* <TableCell>{item.type}</TableCell> */}
                     <TableCell>₹{item.unitPrice}</TableCell>
                     {/* <TableCell>{item.mrp ? `₹${item.mrp.toFixed(2)}` : 'N/A'}</TableCell> */}
-                    <TableCell>{item.type === 'GST' ? `${item.gstPercentage}%` : 'N/A'}</TableCell>
-                    <TableCell>{item.hsnCode || 'N/A'}</TableCell>
-                    <TableCell>{item.salesUnit}</TableCell>
-                    <TableCell>{`Main Godown`}</TableCell>
+                    <TableCell>{item.mrp}</TableCell>
+                    <TableCell>{item.gstPercentage || 'N/A'}</TableCell>
+                    <TableCell>{item.hsn}</TableCell>
+                    <TableCell>{item.godown}</TableCell>
                     <TableCell>{item.stockQuantity}</TableCell>
-                    <TableCell className="flex items-center gap-2">
+                    {/* <TableCell className="flex items-center gap-2">
                       <Button
                         variant="ghost"
                         size="icon"
@@ -140,7 +139,7 @@ const ItemList: React.FC<ItemListProps> = ({ onEdit, onDelete, companyId }) => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => onDelete(item.id)}
+                        // onClick={() => onDelete(item.id)}
                         className="h-8 w-8 text-red-500"
                       >
                         <Trash2 size={16} />
@@ -148,13 +147,13 @@ const ItemList: React.FC<ItemListProps> = ({ onEdit, onDelete, companyId }) => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleReturnItem(item.id)}
+                        // onClick={() => handleReturnItem(item.id)}
                         className="h-8 w-8 text-blue-500"
                         title="Return Item"
                       >
                         <RotateCcw size={16} />
                       </Button>
-                    </TableCell>
+                    </TableCell> */}
                   </TableRow>
                 ))
               ) : (

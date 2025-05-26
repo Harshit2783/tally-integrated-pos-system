@@ -24,19 +24,22 @@ export interface Godown {
 }
 
 export interface Item {
-  id: string;
-  companyId: string;
+  // id: string;
+  company: string;
+  companyId : number
   itemId: string;
   name: string;
-  type: 'GST' | 'NON-GST';
+  // type: 'GST' | 'NON-GST';
   unitPrice: number;
   mrp?: number;
   gstPercentage?: number;
-  hsnCode?: string;  
-  godownId: string;
+  hsn?: number;  
+  // godownId: string;
+  godown : string,
   stockQuantity: number;
   salesUnit: 'Case' | 'Packet' | 'Piece';
   createdAt: string;
+  rateAfterGst : number
 }
 
 export interface SaleItem {
