@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Item, Godown } from '../types';
 import { items as mockItems, godowns as mockGodowns, generateId } from '../data/mockData';
@@ -61,6 +60,7 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
         console.log(result.data);
 
         const mappedItems : Item[] = result.data.map((item,index : number)=>({
+          id: item.id || item.itemId || `${item.itemName}-${index}`,
           name : item.itemName,
           stockQuantity : item.totalQuantity,
           unitPrice : item.rate,
@@ -70,13 +70,7 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
           godown : item.godown,
           company : item.company,
           rateAfterGST : item.rateAfterGST
-
-          // HSN : item.HSN
-          
-        
-        })
-        
-      )
+        }))
 
       setItems(mappedItems)
       localStorage.setItem('items',JSON.stringify(mappedItems))

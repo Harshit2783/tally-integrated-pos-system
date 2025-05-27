@@ -133,11 +133,6 @@ const SaleEntryForm: React.FC = () => {
       return;
     }
 
-    if (selectedGodownId === '') {
-      toast.error('Please select a godown');
-      return;
-    }
-
     if (gstSaleItems.length > 0 && nonGstSaleItems.length > 0) {
       // Create separate bills for GST and Non-GST items
       if (gstSaleItems.length > 0) {
@@ -426,7 +421,7 @@ const SaleEntryForm: React.FC = () => {
               <Button 
                 className="w-full"
                 size="lg"
-                disabled={currentSaleItems.length === 0 || !customerName || !selectedGodownId}
+                disabled={currentSaleItems.length === 0 || !customerName}
                 onClick={handleCreateSale}
               >
                 <ShoppingCart className="mr-2 h-4 w-4" />

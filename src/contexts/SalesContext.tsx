@@ -73,37 +73,9 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         return;
       }
       
-      // Check if item already exists in current sale items with the same company
-      const existingItemIndex = currentSaleItems.findIndex(
-        item => item.itemId === formattedItem.itemId && item.companyId === formattedItem.companyId
-      );
-      
-      if (existingItemIndex !== -1) {
-        // Update quantity if item exists
-        const updatedItems = [...currentSaleItems];
-        const existingItem = updatedItems[existingItemIndex];
-        
-        const newQuantity = existingItem.quantity + formattedItem.quantity;
-        const newTotalPrice = formattedItem.unitPrice * newQuantity;
-        let newGstAmount = 0;
-        
-        if (formattedItem.gstPercentage) {
-          newGstAmount = (formattedItem.unitPrice * newQuantity * formattedItem.gstPercentage) / 100;
-        }
-        
-        updatedItems[existingItemIndex] = {
-          ...existingItem,
-          quantity: newQuantity,
-          gstAmount: newGstAmount,
-          totalPrice: newTotalPrice + newGstAmount,
-          totalAmount: newTotalPrice + newGstAmount,
-        };
-        
-        setCurrentSaleItems(updatedItems);
-      } else {
-        // Add new item
-        setCurrentSaleItems(prev => [...prev, formattedItem]);
-      }
+      // --- CORRECTION: Always add a new row for each item, even if itemId and companyId are the same ---
+      setCurrentSaleItems(prev => [...prev, formattedItem]);
+      // --- END CORRECTION ---
     } catch (error) {
       console.error("Error adding sale item:", error);
       toast.error("Failed to add item");

@@ -55,7 +55,7 @@ interface CompanySummary {
 
 const EnhancedSaleForm: React.FC = () => {
   const { companies, currentCompany, setCurrentCompany } = useCompany();
-  const { items, filteredItems, filteredGodowns } = useInventory();
+  const { items } = useInventory();
   const { addSaleItem, currentSaleItems, removeSaleItem, createSale, clearSaleItems, validateCompanyItems, updateSaleItem: contextUpdateSaleItem } = useSales();
   const { addCustomer } = useCustomers();
   const { currentUser } = useAuth();
@@ -65,7 +65,6 @@ const EnhancedSaleForm: React.FC = () => {
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
   const [customerName, setCustomerName] = useState<string>('');
-  const [selectedGodownId, setSelectedGodownId] = useState<string>('');
   const [salesUnit, setSalesUnit] = useState<string>('Piece');
   const [mrp, setMrp] = useState<number>(0);
   const [exclusiveCost, setExclusiveCost] = useState<number>(0);
@@ -172,14 +171,7 @@ const EnhancedSaleForm: React.FC = () => {
     // const hasGodowns = filteredGodowns && filteredGodowns.length > 0;
     
     setIsLoading(!(hasItems));
-  }, [companies, items, filteredGodowns]);
-
-  // Initialize godown selection
-  useEffect(() => {
-    if (filteredGodowns && filteredGodowns.length > 0 && !selectedGodownId) {
-      setSelectedGodownId(filteredGodowns[0].id);
-    }
-  }, [filteredGodowns, selectedGodownId]);
+  }, [companies, items]);
 
   // Update item details when item selection changes
   useEffect(() => {
@@ -288,7 +280,8 @@ const EnhancedSaleForm: React.FC = () => {
       totalPrice,
       totalAmount: totalPrice,
       hsnCode: hsnCode || undefined,
-      packagingDetails: packagingDetails || undefined
+      packagingDetails: packagingDetails || undefined,
+      godown: selectedItem.godown
     };
     try {
       addSaleItem(saleItem);
@@ -423,11 +416,6 @@ const EnhancedSaleForm: React.FC = () => {
       return;
     }
     
-    if (!selectedGodownId) {
-      toast.error('Please select a godown');
-      return;
-    }
-    
     try {
       // Validate company-specific rules
       const validation = validateCompanyItems(currentSaleItems);
@@ -463,7 +451,6 @@ const EnhancedSaleForm: React.FC = () => {
           date: new Date().toISOString(),
           customerName,
           billType,
-          godownId: selectedGodownId,
           items,
           totalAmount: items.reduce((sum, item) => sum + item.totalPrice, 0),
           createdBy: currentUser?.name || 'Unknown',
@@ -595,7 +582,6 @@ const EnhancedSaleForm: React.FC = () => {
         onAddItem={addSaleItem}
         companies={companies || []}
         items={items || []}
-        filteredGodowns={filteredGodowns || []}
       />
       
       <SaleItemsTable
@@ -614,7 +600,7 @@ const EnhancedSaleForm: React.FC = () => {
         onCreateSale={handleCreateSale}
         onPreviewBill={handlePreviewConsolidatedBill}
         onClearItems={clearSaleItems}
-        isDisabled={currentSaleItems.length === 0 || !customerName || !selectedGodownId}
+        isDisabled={currentSaleItems.length === 0 || !customerName}
       />
 
       <DiscountDialog

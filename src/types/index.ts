@@ -59,6 +59,7 @@ export interface SaleItem {
   totalPrice: number; // Final price after GST and discount
   totalAmount: number;
   salesUnit: string;
+  godown: string;
 }
 
 // Customer Type
@@ -81,7 +82,7 @@ export interface Sale {
   date: string;
   customerName: string;
   billType: 'GST' | 'NON-GST';
-  godownId: string;
+  godownId?: string;
   totalAmount: number;
   totalDiscount?: number;
   totalExclusiveCost?: number;

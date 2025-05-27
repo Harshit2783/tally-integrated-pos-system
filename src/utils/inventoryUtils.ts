@@ -33,6 +33,7 @@ export const formatInventoryItemForBilling = (item: any) => {
     hsnCode: item.hsn,
     type: item.type,
     salesUnit: item.salesUnit,
-    availableQuantity: totalPieces
+    availableQuantity: totalPieces,
+    companyName: item.companyName || (item.company && item.company.name) || '',
   };
 }; 

@@ -17,24 +17,21 @@ import { calculateExclusiveCost, calculateMRP, calculateGstAmount } from '../../
 // Define sales units
 const SALES_UNITS = ['Case', 'Packet', 'Piece'];
 
-interface ItemEntryFormProps {
+type ItemEntryFormProps = {
   onAddItem: (item: SaleItem) => void;
   companies: any[];
   items: Item[];
-  filteredGodowns: any[];
-}
+};
 
 const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
   onAddItem,
   companies,
   items,
-  filteredGodowns,
 }) => {
   const [company,setCompany] = useState<string>('');
   const [selectedItemName, setSelectedItemName] = useState<string>('');
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [quantity, setQuantity] = useState<number>(0);
-  const [selectedGodownId, setSelectedGodownId] = useState<string>('');
   const [salesUnit, setSalesUnit] = useState<string>('Piece');
   const [mrp, setMrp] = useState<number>(0);
   const [gstRate,setGstRate] = useState<number>(0)
@@ -171,7 +168,8 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
       totalPrice,
       totalAmount: totalPrice,
       hsnCode: hsnCode || undefined,
-      packagingDetails: packagingDetails || undefined
+      packagingDetails: packagingDetails || undefined,
+      godown: selectedItem.godown
     };
     try {
       onAddItem(saleItem);
@@ -314,24 +312,6 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
               </SelectContent>
             </Select>
           </div>
-          <div className="col-span-12 md:col-span-2">
-            <Label htmlFor="godown">Godown *</Label>
-            <Select 
-              value={selectedGodownId} 
-              onValueChange={setSelectedGodownId}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select godown" />
-              </SelectTrigger>
-              <SelectContent>
-                {filteredGodowns && filteredGodowns.map((godown) => (
-                  <SelectItem key={godown.id} value={godown.id}>
-                    {godown.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
         </div>
 
         <div className="grid grid-cols-1 md:col-span-5 gap-4 mb-6">
@@ -404,7 +384,16 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
             />
             <p className="text-xs text-gray-500 mt-1">Required for GST items</p>
           </div>
-          
+          <div>
+            <Label htmlFor="godown">Godown</Label>
+            <Input
+              id="godown"
+              value={selectedItem?.godown || ''}
+              readOnly
+              className="bg-gray-50"
+            />
+            <p className="text-xs text-gray-500 mt-1">Fetched automatically from item</p>
+          </div>
           <div>
             <Label htmlFor="packagingDetails">Packaging Details</Label>
             <Input
