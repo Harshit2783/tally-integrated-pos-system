@@ -33,7 +33,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
   const [company,setCompany] = useState<string>('');
   const [selectedItemName, setSelectedItemName] = useState<string>('');
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
-  const [quantity, setQuantity] = useState<number>(1);
+  const [quantity, setQuantity] = useState<number>(0);
   const [selectedGodownId, setSelectedGodownId] = useState<string>('');
   const [salesUnit, setSalesUnit] = useState<string>('Piece');
   const [mrp, setMrp] = useState<number>(0);
@@ -125,6 +125,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
   //   }
   // };
 
+  
   // Handle adding item to bill
   const handleAddItem = () => {
     if (!selectedItem) {
@@ -153,11 +154,11 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
       itemGstAmount = (discountedBaseAmount * gstRate) / 100;
     }
     const totalPrice = discountedBaseAmount + itemGstAmount;
-    const itemCompany = companies?.find(c => c.id === selectedItem.companyId);
+    const itemCompany = selectedItem.company
     const saleItem: SaleItem = {
       itemId: '1',
       companyId: selectedItem.companyId,
-      companyName : company,
+      companyName : itemCompany,
       name: selectedItem.name,
       quantity,
       unitPrice: exclusiveCost,
@@ -176,8 +177,9 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
       onAddItem(saleItem);
       setSelectedItemName('');
       setSelectedItem(null);
-      setQuantity(1);
+      setQuantity(0);
       setDiscount(0);
+      setHsnCode('')
       setSearchTerm('');
       setIsItemPopoverOpen(false);
     } catch (error) {
@@ -188,7 +190,6 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
 
   const getItemDisplayDetails = (item: Item) => {
     if (!item) return "";
-    const company = companies.find(c => c.id === item.companyId);
     const hasBulkPrices = Array.isArray((item as any).bulkPrices) && (item as any).bulkPrices.length > 0;
     return (
       <div className="w-full">
@@ -293,7 +294,8 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
               type="number"
               min="1"
               value={quantity}
-              onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
+              onChange={(e) => setQuantity(parseInt(e.target.value))}
+
             />
           </div>
           
@@ -312,7 +314,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
               </SelectContent>
             </Select>
           </div>
-          {/* <div className="col-span-12 md:col-span-2">
+          <div className="col-span-12 md:col-span-2">
             <Label htmlFor="godown">Godown *</Label>
             <Select 
               value={selectedGodownId} 
@@ -329,7 +331,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
                 ))}
               </SelectContent>
             </Select>
-          </div> */}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:col-span-5 gap-4 mb-6">
@@ -352,7 +354,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
               type="number"
               min="0"
               step="0.01"
-              value={exclusiveCost}
+              value={Number(exclusiveCost).toFixed(2)}
               onChange={(e) => setExclusiveCost(parseFloat(e.target.value) || 0)}
             />
           </div>
