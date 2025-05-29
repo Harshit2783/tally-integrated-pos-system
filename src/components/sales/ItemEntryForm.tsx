@@ -105,24 +105,6 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
     }
   }, [selectedItemName, items, quantity]);
 
-
-
-  // Handle MRP change
-  // const handleMrpChange = (value: number) => {
-  //   setMrp(value);
-  //   if ( > 0) {
-  //     const newExclusiveCost = calculateExclusiveCost(value, gstRate);
-  //     setExclusiveCost(newExclusiveCost);
-      
-  //     const newGstAmount = value - newExclusiveCost;
-  //     setGstAmount(newGstAmount * quantity);
-  //   } else {
-  //     setExclusiveCost(value);
-  //     setGstAmount(0);
-  //   }
-  // };
-
-  
   // Handle adding item to bill
   const handleAddItem = () => {
     if (!selectedItem) {
@@ -217,13 +199,13 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
   };
 
   return (
-    <Card className="p-6">
-      <h3 className="text-lg font-semibold mb-4">Add Item</h3>
-      <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
-        <div className="grid grid-cols-12 gap-3 mb-4">
-          {/* Item Selection with Search - 5 columns */}
-          <div className="col-span-12 md:col-span-5">
-            <Label htmlFor="item">Item Name</Label>
+    <Card className="p-4">
+      <h3 className="text-lg font-semibold mb-2">Add Item</h3>
+      <form onSubmit={(e) => e.preventDefault()}>
+        <div className="flex flex-wrap items-end gap-2 mb-2 overflow-x-auto">
+          {/* Item Selection */}
+          <div className="w-[200px]">
+            <Label htmlFor="item" className="text-xs">Item Name</Label>
             <Popover open={isItemPopoverOpen} onOpenChange={setIsItemPopoverOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -231,7 +213,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
                   variant="outline"
                   role="combobox"
                   aria-expanded={isItemPopoverOpen}
-                  className="w-full justify-between"
+                  className="w-full h-8 text-xs justify-between"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -239,12 +221,10 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
                   }}
                 >
                   {selectedItem ? selectedItemName : "Select an item"}
-                  <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  <ChevronDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
                 </Button>
-
-                {/* to select item */}
               </PopoverTrigger>
-              <PopoverContent className="w-[400px] p-0" align="start">
+              <PopoverContent className="w-[300px] p-0" align="start">
                 <div className="p-2">
                   <Input
                     placeholder="Search items..."
@@ -258,7 +238,6 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
                     ) : (
                       filteredSearchItems.map((item) => (
                         <button
-                          // key={item.id}
                           type="button"
                           className="w-full p-2 text-left hover:bg-gray-100 rounded-sm flex items-center"
                           onClick={(e) => {
@@ -284,51 +263,77 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
               </PopoverContent>
             </Popover>
           </div>
+
+          {/* Godown */}
+          <div className="w-[120px]">
+            <Label htmlFor="godown" className="text-xs">Godown</Label>
+            <Input
+              id="godown"
+              value={selectedItem?.godown || ''}
+              readOnly
+              className="bg-gray-50 h-8 text-xs"
+            />
+          </div>
           
-          <div className="col-span-6 md:col-span-2">
-            <Label htmlFor="quantity">Quantity</Label>
+          {/* Quantity */}
+          <div className="w-[80px]">
+            <Label htmlFor="quantity" className="text-xs">Sale Qty</Label>
             <Input
               id="quantity"
               type="number"
               min="1"
               value={quantity}
-              onChange={(e) => setQuantity(parseInt(e.target.value))}
-
+              onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
+              className="h-8 text-xs"
             />
           </div>
           
-          <div className="col-span-6 md:col-span-1">
-            <Label htmlFor="salesUnit">Unit</Label>
+          {/* Unit */}
+          <div className="w-[80px]">
+            <Label htmlFor="salesUnit" className="text-xs">Sale Unit</Label>
             <Select value={salesUnit} onValueChange={setSalesUnit}>
-              <SelectTrigger>
+              <SelectTrigger className="h-8 text-xs">
                 <SelectValue placeholder="Unit" />
               </SelectTrigger>
               <SelectContent>
                 {SALES_UNITS.map((unit) => (
-                  <SelectItem key={unit} value={unit}>
+                  <SelectItem key={unit} value={unit} className="text-xs">
                     {unit}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:col-span-5 gap-4 mb-6">
-          <div>
-            <Label htmlFor="mrp">MRP</Label>
+          
+          {/* Quantity */}
+          <div className="w-[80px]">
+            <Label htmlFor="stockQuantity" className="text-xs">Quantity</Label>
+            <Input
+              id="stockQuantity"
+              type="text"
+              value={selectedItem?.stockQuantity || ''}
+              readOnly
+              className="bg-gray-50 h-8 text-xs"
+            />
+          </div>
+          
+          {/* MRP */}
+          <div className="w-[80px]">
+            <Label htmlFor="mrp" className="text-xs">MRP</Label>
             <Input
               id="mrp"
               type="number"
               min="0"
               step="0.01"
               value={mrp}
-              // onChange={(e) => handleMrpChange(parseFloat(e.target.value) || 0)}
+              className="h-8 text-xs"
+              readOnly
             />
           </div>
           
-          <div>
-            <Label htmlFor="exclusiveCost">Excl. GST Rate</Label>
+          {/* Excl. GST Rate */}
+          <div className="w-[80px]">
+            <Label htmlFor="exclusiveCost" className="text-xs">Excl. Rate</Label>
             <Input
               id="exclusiveCost"
               type="number"
@@ -336,147 +341,136 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
               step="0.01"
               value={Number(exclusiveCost).toFixed(2)}
               onChange={(e) => setExclusiveCost(parseFloat(e.target.value) || 0)}
+              className="h-8 text-xs"
             />
           </div>
           
-          <div>
-            <Label htmlFor="gstRate">GST Rate (%)</Label>
+          {/* GST Rate */}
+          <div className="w-[80px]">
+            <Label htmlFor="gstRate" className="text-xs">GST Rate</Label>
             <Input
               id="gstRate"
               type="number"
               value={gstRate}
               readOnly
-              className="bg-gray-50"
+              className="bg-gray-50 h-8 text-xs"
             />
           </div>
           
-          <div>
-            <Label htmlFor="gstAmount">GST Amount</Label>
+          {/* GST Amount */}
+          <div className="w-[80px]">
+            <Label htmlFor="gstAmount" className="text-xs">GST Amt</Label>
             <Input
               id="gstAmount"
               type="number"
               value={gstAmount.toFixed(2)}
               readOnly
-              className="bg-gray-50"
+              className="bg-gray-50 h-8 text-xs"
             />
           </div>
           
-          <div>
-            <Label htmlFor="totalAmount">Total Amount</Label>
+          {/* Rate */}
+          <div className="w-[80px]">
+            <Label htmlFor="totalRate" className="text-xs">Rate</Label>
             <Input
-              id="totalAmount"
+              id="totalRate"
               type="number"
-              value={(exclusiveCost * quantity + gstAmount).toFixed(2)}
+              value={(exclusiveCost + (exclusiveCost * gstRate / 100)).toFixed(2)}
               readOnly
-              className="bg-gray-50"
+              className="bg-gray-50 h-8 text-xs"
             />
           </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div>
-            <Label htmlFor="hsnCode">HSN Code</Label>
+          
+          {/* Per */}
+          <div className="w-[60px]">
+            <Label htmlFor="per" className="text-xs">Per</Label>
             <Input
-              id="hsnCode"
-              value={hsnCode}
-              readOnly
-              className="bg-gray-50"
-            />
-            <p className="text-xs text-gray-500 mt-1">Required for GST items</p>
-          </div>
-          <div>
-            <Label htmlFor="godown">Godown</Label>
-            <Input
-              id="godown"
-              value={selectedItem?.godown || ''}
-              readOnly
-              className="bg-gray-50"
-            />
-            <p className="text-xs text-gray-500 mt-1">Fetched automatically from item</p>
-          </div>
-          <div>
-            <Label htmlFor="packagingDetails">Packaging Details</Label>
-            <Input
-              id="packagingDetails"
-              value={packagingDetails}
-              onChange={(e) => setPackagingDetails(e.target.value)}
-              placeholder="Optional details about packaging"
-              maxLength={50}
-            />
-            <p className="text-xs text-gray-500 mt-1">Will appear on 2nd line in Estimate bill</p>
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-          <div>
-            <Label htmlFor="perUnit">Per ({salesUnit})</Label>
-            <Input
-              id="perUnit"
+              id="per"
               type="text"
-              value={`₹${mrp}/${salesUnit}`}
+              value={salesUnit}
               readOnly
-              className="bg-gray-50"
+              className="bg-gray-50 h-8 text-xs"
             />
           </div>
           
-          <div>
-            <Label htmlFor="discount">Discount</Label>
-            <div className="flex">
-              <Input
-                id="discount"
-                type="number"
-                min="0"
-                step="0.01"
-                value={discount}
-                onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
-                className="rounded-r-none"
-              />
-              <Select 
-                value={discountType} 
-                onValueChange={(value: 'amount' | 'percentage') => setDiscountType(value)}
-              >
-                <SelectTrigger className="w-20 rounded-l-none">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="amount">₹</SelectItem>
-                  <SelectItem value="percentage">%</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Amount */}
+          <div className="w-[80px]">
+            <Label htmlFor="amount" className="text-xs">Amount</Label>
+            <Input
+              id="amount"
+              type="number"
+              value={(exclusiveCost * quantity).toFixed(2)}
+              readOnly
+              className="bg-gray-50 h-8 text-xs"
+            />
           </div>
           
-          <div className="md:col-span-3 flex items-end">
+          {/* Discount */}
+          <div className="w-[80px]">
+            <Label htmlFor="discount" className="text-xs">Disc %</Label>
+            <Input
+              id="discount"
+              type="number"
+              min="0"
+              step="0.01"
+              value={discount}
+              onChange={(e) => setDiscount(parseFloat(e.target.value) || 0)}
+              className="h-8 text-xs"
+            />
+          </div>
+          
+          {/* Disc */}
+          <div className="w-[80px]">
+            <Label htmlFor="discAmount" className="text-xs">Disc</Label>
+            <Input
+              id="discAmount"
+              type="number"
+              value={(discountType === 'amount' ? discount : (exclusiveCost * quantity * discount / 100)).toFixed(2)}
+              readOnly
+              className="bg-gray-50 h-8 text-xs"
+            />
+          </div>
+          
+          {/* Nett Amount */}
+          <div className="w-[80px]">
+            <Label htmlFor="nettAmount" className="text-xs">Nett Amount</Label>
+            <Input
+              id="nettAmount"
+              type="number"
+              value={(exclusiveCost * quantity + gstAmount - (discountType === 'amount' ? discount : (exclusiveCost * quantity * discount / 100))).toFixed(2)}
+              readOnly
+              className="bg-gray-50 h-8 text-xs"
+            />
+          </div>
+          
+          {/* Add Button */}
+          <div>
             <Button 
               type="button" 
               onClick={handleAddItem}
-              className="w-full"
+              className="h-8 text-xs"
               disabled={!selectedItemName || quantity <= 0}
             >
-              <Plus size={16} className="mr-1" /> Add Item
+              <Plus size={14} className="mr-1" /> Add
             </Button>
           </div>
         </div>
         
-        {/* Item stock info */}
-        {selectedItem && (
-          <div className="text-xs text-gray-600 mb-4">
-            <p>In stock: {selectedItem.stockQuantity} units</p>
-          </div>
-        )}
+        {/* Hidden Fields for HSN and Packaging */}
+        <div className="hidden">
+          <Input id="hsnCode" value={hsnCode} readOnly />
+          <Input id="packagingDetails" value={packagingDetails} onChange={(e) => setPackagingDetails(e.target.value)} />
+        </div>
         
-        {/* Company-specific warnings */}
-        {company === 'Mansan Laal and Sons' && (
-          <div className="flex items-center p-2 mb-4 text-amber-800 bg-amber-50 rounded border border-amber-200">
-            <AlertCircle size={16} className="mr-2" />
-            <p className="text-xs">Mansan Laal and Sons requires GST items with HSN codes only.</p>
-          </div>
-        )}
-        
-        {company === 'Estimate' && (
-          <div className="flex items-center p-2 mb-4 text-blue-800 bg-blue-50 rounded border border-blue-200">
-            <AlertCircle size={16} className="mr-2" />
-            <p className="text-xs">Estimate company only accepts Non-GST items.</p>
+        {/* Warnings */}
+        {company && (company === 'Mansan Laal and Sons' || company === 'Estimate') && (
+          <div className="flex items-center p-1 mb-1 text-amber-800 bg-amber-50 rounded border border-amber-200">
+            <AlertCircle size={12} className="mr-1" />
+            <p className="text-xs">
+              {company === 'Mansan Laal and Sons' 
+                ? 'Mansan Laal and Sons requires GST items with HSN codes only.'
+                : 'Estimate company only accepts Non-GST items.'}
+            </p>
           </div>
         )}
       </form>
