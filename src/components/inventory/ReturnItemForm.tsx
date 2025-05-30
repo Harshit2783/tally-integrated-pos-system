@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useInventory } from '../../contexts/InventoryContext';
 import { useCompany } from '../../contexts/CompanyContext';
@@ -77,12 +76,15 @@ const ReturnItemForm: React.FC<ReturnItemFormProps> = ({
       return;
     }
 
-    // Call updateStock with negative quantity to add back to inventory
-    // We use negative here because updateStock normally subtracts from inventory
-    updateStock(selectedItemId, -quantity, salesUnit);
-    
-    toast.success(`${quantity} ${salesUnit}(s) of ${selectedItem?.name} returned successfully`);
-    onCancel(); // Close form after success
+    try {
+      // Call updateStock with negative quantity to add back to inventory
+      updateStock(selectedItemId, -quantity, salesUnit);
+      
+      toast.success(`${quantity} ${salesUnit}(s) of ${selectedItem?.name} returned successfully`);
+      onCancel(); // Close form after success
+    } catch (error) {
+      toast.error('Failed to return item. Stock update functionality is limited in the current version.');
+    }
   };
 
   return (

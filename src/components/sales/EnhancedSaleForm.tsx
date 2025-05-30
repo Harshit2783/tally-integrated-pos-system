@@ -98,7 +98,8 @@ const EnhancedSaleForm: React.FC = () => {
 
   // Add this near the top of the component, after state declarations:
   const itemsToShow = items;
-  console.log(itemsToShow);
+  // Debug logging can be re-enabled if needed
+  // console.log(itemsToShow);
 
   // Restore hsnCode and packagingDetails state
   const [gstRate,setGstRate] = useState<number>(0)

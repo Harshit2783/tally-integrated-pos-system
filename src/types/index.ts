@@ -24,7 +24,7 @@ export interface Godown {
 }
 
 export interface Item {
-  // id: string;
+  id: string;
   company: string;
   companyId : string
   itemId: string;

@@ -151,7 +151,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
       totalAmount: totalPrice,
       hsnCode: hsnCode || undefined,
       packagingDetails: packagingDetails || undefined,
-      godown: selectedItem.godown
+      godown: selectedItem.godown || 'Not assigned'
     };
     try {
       onAddItem(saleItem);
@@ -204,7 +204,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
       <form onSubmit={(e) => e.preventDefault()}>
         <div className="flex flex-wrap items-end gap-2 mb-2 overflow-x-auto">
           {/* Item Selection */}
-          <div className="w-[200px]">
+          <div className="w-[280px]">
             <Label htmlFor="item" className="text-xs">Item Name</Label>
             <Popover open={isItemPopoverOpen} onOpenChange={setIsItemPopoverOpen}>
               <PopoverTrigger asChild>
@@ -238,6 +238,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
                     ) : (
                       filteredSearchItems.map((item) => (
                         <button
+                          key={item.itemId || item.name}
                           type="button"
                           className="w-full p-2 text-left hover:bg-gray-100 rounded-sm flex items-center"
                           onClick={(e) => {
@@ -265,11 +266,11 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
           </div>
 
           {/* Godown */}
-          <div className="w-[120px]">
+          <div className="w-[180px]">
             <Label htmlFor="godown" className="text-xs">Godown</Label>
             <Input
               id="godown"
-              value={selectedItem?.godown || ''}
+              value={selectedItem?.godown || 'Not assigned'}
               readOnly
               className="bg-gray-50 h-8 text-xs"
             />
@@ -363,7 +364,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
             <Input
               id="gstAmount"
               type="number"
-              value={gstAmount.toFixed(2)}
+              value={Number(gstAmount).toFixed(2)}
               readOnly
               className="bg-gray-50 h-8 text-xs"
             />
@@ -375,14 +376,14 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
             <Input
               id="totalRate"
               type="number"
-              value={(exclusiveCost + (exclusiveCost * gstRate / 100)).toFixed(2)}
+              value={(Number(exclusiveCost) + (Number(exclusiveCost) * Number(gstRate) / 100)).toFixed(2)}
               readOnly
               className="bg-gray-50 h-8 text-xs"
             />
           </div>
           
           {/* Per */}
-          <div className="w-[60px]">
+          <div className="w-[120px]">
             <Label htmlFor="per" className="text-xs">Per</Label>
             <Input
               id="per"
@@ -394,19 +395,19 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
           </div>
           
           {/* Amount */}
-          <div className="w-[80px]">
+          <div className="w-[160px]">
             <Label htmlFor="amount" className="text-xs">Amount</Label>
             <Input
               id="amount"
               type="number"
-              value={(exclusiveCost * quantity).toFixed(2)}
+              value={(Number(exclusiveCost) * Number(quantity)).toFixed(2)}
               readOnly
               className="bg-gray-50 h-8 text-xs"
             />
           </div>
           
           {/* Discount */}
-          <div className="w-[80px]">
+          <div className="w-[160px]">
             <Label htmlFor="discount" className="text-xs">Disc %</Label>
             <Input
               id="discount"
@@ -420,35 +421,35 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
           </div>
           
           {/* Disc */}
-          <div className="w-[80px]">
+          <div className="w-[160px]">
             <Label htmlFor="discAmount" className="text-xs">Disc</Label>
             <Input
               id="discAmount"
               type="number"
-              value={(discountType === 'amount' ? discount : (exclusiveCost * quantity * discount / 100)).toFixed(2)}
+              value={(discountType === 'amount' ? Number(discount) : (Number(exclusiveCost) * Number(quantity) * Number(discount) / 100)).toFixed(2)}
               readOnly
               className="bg-gray-50 h-8 text-xs"
             />
           </div>
           
           {/* Nett Amount */}
-          <div className="w-[80px]">
+          <div className="w-[200px]">
             <Label htmlFor="nettAmount" className="text-xs">Nett Amount</Label>
             <Input
               id="nettAmount"
               type="number"
-              value={(exclusiveCost * quantity + gstAmount - (discountType === 'amount' ? discount : (exclusiveCost * quantity * discount / 100))).toFixed(2)}
+              value={(Number(exclusiveCost) * Number(quantity) + Number(gstAmount) - (discountType === 'amount' ? Number(discount) : (Number(exclusiveCost) * Number(quantity) * Number(discount) / 100))).toFixed(2)}
               readOnly
               className="bg-gray-50 h-8 text-xs"
             />
           </div>
           
           {/* Add Button */}
-          <div>
+          <div className="w-[120px]">
             <Button 
               type="button" 
               onClick={handleAddItem}
-              className="h-8 text-xs"
+              className="h-8 text-xs w-full"
               disabled={!selectedItemName || quantity <= 0}
             >
               <Plus size={14} className="mr-1" /> Add

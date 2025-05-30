@@ -9,8 +9,11 @@ export const formatInventoryItemForBilling = (item: any) => {
     }
   }
 
-  // Calculate GST amount
-  const gstAmount = item.gstPercentage 
+  // Handle gstPercentage properly for non-GST items (keep it undefined)
+  const hasGst = item.gstPercentage !== undefined && item.gstPercentage > 0;
+  
+  // Calculate GST amount only if GST is applicable
+  const gstAmount = hasGst 
     ? (item.unitPrice * item.gstPercentage) / 100
     : 0;
 
@@ -22,17 +25,17 @@ export const formatInventoryItemForBilling = (item: any) => {
     companyId: item.companyId,
     company: item.company,
     godownId: item.godownId,
-    godown: item.godown,
+    godown: item.godown || 'Not assigned',
     unitPrice: item.unitPrice,
-    quantity: 1, // Default quantity, will be updated by user
-    gstPercentage: item.gstPercentage || 0,
+    quantity: item.quantity || 1, // Use provided quantity or default to 1
+    gstPercentage: hasGst ? item.gstPercentage : undefined, // Keep undefined for non-GST items
     gstAmount: gstAmount,
     totalPrice: item.unitPrice + gstAmount,
-    totalAmount: item.unitPrice + gstAmount,
+    totalAmount: item.totalAmount || (item.unitPrice + gstAmount),
     mrp: item.mrp,
     hsnCode: item.hsn,
     type: item.type,
-    salesUnit: item.salesUnit,
+    salesUnit: item.salesUnit || 'Piece',
     availableQuantity: totalPieces,
     companyName: item.companyName || (item.company && item.company.name) || '',
   };

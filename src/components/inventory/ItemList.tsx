@@ -75,7 +75,7 @@ const ItemList: React.FC<ItemListProps> = ({ onEdit, onDelete, companyId }) => {
           primaryItem: item
         };
       } else {
-        // Add godown if it's not already in the list
+        // Add godown if it's not already in the list and not empty
         if (item.godown && !grouped[key].godowns.includes(item.godown)) {
           grouped[key].godowns.push(item.godown);
         }
@@ -142,26 +142,30 @@ const ItemList: React.FC<ItemListProps> = ({ onEdit, onDelete, companyId }) => {
                     <TableCell>{item.gstPercentage || 'N/A'}</TableCell>
                     <TableCell>{item.hsn}</TableCell>
                     <TableCell>
-                      <Select 
-                        value={selectedGodowns[item.name] || ''}
-                        onValueChange={(value) => {
-                          setSelectedGodowns(prev => ({
-                            ...prev,
-                            [item.name]: value
-                          }));
-                        }}
-                      >
-                        <SelectTrigger className="w-[180px]">
-                          <SelectValue placeholder="Select godown" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {item.godowns.map((godown) => (
-                            <SelectItem key={`${item.name}-${godown}`} value={godown}>
-                              {godown}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {item.godowns.length > 0 ? (
+                        <Select 
+                          value={selectedGodowns[item.name] || ''}
+                          onValueChange={(value) => {
+                            setSelectedGodowns(prev => ({
+                              ...prev,
+                              [item.name]: value
+                            }));
+                          }}
+                        >
+                          <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Select godown" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {item.godowns.map((godown) => (
+                              <SelectItem key={`${item.name}-${godown}`} value={godown}>
+                                {godown}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <span className="text-gray-500">No godown assigned</span>
+                      )}
                     </TableCell>
                     <TableCell>{item.stockQuantity}</TableCell>
                   </TableRow>

@@ -32,7 +32,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [currentSaleItems, setCurrentSaleItems] = useState<SaleItem[]>([]);
   
   const { currentCompany, companies } = useCompany();
-  const { updateStock, items } = useInventory();
+  const { items } = useInventory();
 
   // Filter sales based on current company
   useEffect(() => {
@@ -73,8 +73,18 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         return;
       }
       
+      // Preserve original quantity, discount and other properties
+      const finalItem = {
+        ...formattedItem,
+        quantity: saleItem.quantity,
+        discountValue: saleItem.discountValue,
+        discountPercentage: saleItem.discountPercentage,
+        totalPrice: saleItem.totalPrice,
+        totalAmount: saleItem.totalAmount,
+      };
+      
       // --- CORRECTION: Always add a new row for each item, even if itemId and companyId are the same ---
-      setCurrentSaleItems(prev => [...prev, formattedItem]);
+      setCurrentSaleItems(prev => [...prev, finalItem]);
       // --- END CORRECTION ---
     } catch (error) {
       console.error("Error adding sale item:", error);
@@ -172,7 +182,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         // Special validation for Mansan Laal
         if (company.name === 'Mansan Laal and Sons') {
           // All items must be GST items
-          const nonGstItems = companyItems.filter(item => !item.gstPercentage);
+          const nonGstItems = companyItems.filter(item => item.gstPercentage === undefined || item.gstPercentage === 0);
           if (nonGstItems.length > 0) {
             return {
               valid: false,
@@ -193,7 +203,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         // Special validation for Estimate
         if (company.name === 'Estimate') {
           // All items must be Non-GST items
-          const gstItems = companyItems.filter(item => item.gstPercentage && item.gstPercentage > 0);
+          const gstItems = companyItems.filter(item => item.gstPercentage !== undefined && item.gstPercentage > 0);
           if (gstItems.length > 0) {
             return {
               valid: false,
@@ -203,9 +213,9 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         }
         
         // General validation - no mixing of GST and Non-GST items
-        const hasGst = companyItems.some(item => item.gstPercentage && item.gstPercentage > 0);
-        const allHaveGst = companyItems.every(item => item.gstPercentage && item.gstPercentage > 0);
-        const noneHaveGst = companyItems.every(item => !item.gstPercentage || item.gstPercentage === 0);
+        const hasGst = companyItems.some(item => item.gstPercentage !== undefined && item.gstPercentage > 0);
+        const allHaveGst = companyItems.every(item => item.gstPercentage !== undefined && item.gstPercentage > 0);
+        const noneHaveGst = companyItems.every(item => item.gstPercentage === undefined || item.gstPercentage === 0);
         
         if (hasGst && !allHaveGst && !noneHaveGst) {
           return {
@@ -216,7 +226,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         
         // Validate MRP = Excl. Cost + GST for all GST items
         for (const item of companyItems) {
-          if (item.gstPercentage && item.mrp) {
+          if (item.gstPercentage !== undefined && item.gstPercentage > 0 && item.mrp) {
             const calculatedMRP = item.unitPrice * (1 + item.gstPercentage / 100);
             if (Math.abs(calculatedMRP - item.mrp) > 0.01) { // Allow small rounding difference
               return {
@@ -264,11 +274,8 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         createdAt: new Date().toISOString(),
       };
       
-      // Update stock quantities
-      saleData.items.forEach(item => {
-        // Pass the sales unit to updateStock for proper unit conversion
-        updateStock(item.itemId, item.quantity, item.salesUnit);
-      });
+      // Note: Stock update is currently disabled
+      // In a future update, implement proper stock management with the updateStock function
       
       // Add sale to list
       setSales(prev => [...prev, newSale]);
