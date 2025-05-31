@@ -87,6 +87,11 @@ export interface Sale {
   totalDiscount?: number;
   totalExclusiveCost?: number;
   totalGst?: number;
+  taxInvoiceNo?: string;  // Added tax invoice number field
+  estimateNo?: string;    // Added estimate number field
+  partyAccount?: string;  // Added party account field
+  customerMobile?: string; // Added customer mobile field
+  extraValue?: string;     // Added extra value field
   items: SaleItem[];
   // createdBy: string;
   createdAt: string;

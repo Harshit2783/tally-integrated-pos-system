@@ -455,6 +455,11 @@ const EnhancedSaleForm: React.FC = () => {
           items,
           totalAmount: items.reduce((sum, item) => sum + item.totalPrice, 0),
           createdBy: currentUser?.name || 'Unknown',
+          taxInvoiceNo,
+          estimateNo,
+          partyAccount,
+          customerMobile,
+          extraValue,
         };
         
         const sale = createSale(billData);
@@ -473,6 +478,11 @@ const EnhancedSaleForm: React.FC = () => {
         
         // Reset form
         setCustomerName('');
+        setTaxInvoiceNo('');
+        setEstimateNo('');
+        setPartyAccount('');
+        setCustomerMobile('');
+        setExtraValue('');
         clearSaleItems();
       }
     } catch (error) {
@@ -562,6 +572,22 @@ const EnhancedSaleForm: React.FC = () => {
   // Remove popover/ref/focus logic for customer name input
   const [customerNameInputFocused, setCustomerNameInputFocused] = useState(false);
 
+  // Add state for tax invoice and estimate number
+  const [taxInvoiceNo, setTaxInvoiceNo] = useState<string>('');
+  const [estimateNo, setEstimateNo] = useState<string>('');
+  
+  // Add state for party account, customer mobile and extra value
+  const [partyAccount, setPartyAccount] = useState<string>('');
+  const [customerMobile, setCustomerMobile] = useState<string>('');
+  const [extraValue, setExtraValue] = useState<string>('');
+  
+  // Mock party accounts data - this would come from backend in a real application
+  const mockPartyAccounts = useMemo(() => [
+    { id: 'cash', name: 'Cash' },
+    { id: 'credit', name: 'Credit' },
+    { id: 'bank', name: 'Bank' },
+  ], []);
+
   // Loading state
   if (isLoading) {
     return (
@@ -577,6 +603,17 @@ const EnhancedSaleForm: React.FC = () => {
         customerName={customerName}
         onCustomerNameChange={setCustomerName}
         onAddCustomer={addCustomer}
+        taxInvoiceNo={taxInvoiceNo}
+        onTaxInvoiceNoChange={setTaxInvoiceNo}
+        estimateNo={estimateNo}
+        onEstimateNoChange={setEstimateNo}
+        partyAccount={partyAccount}
+        onPartyAccountChange={setPartyAccount}
+        customerMobile={customerMobile}
+        onCustomerMobileChange={setCustomerMobile}
+        extraValue={extraValue}
+        onExtraValueChange={setExtraValue}
+        partyAccounts={mockPartyAccounts}
       />
       
       <ItemEntryForm
