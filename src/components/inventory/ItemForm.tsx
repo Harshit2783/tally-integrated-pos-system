@@ -15,7 +15,7 @@ import {
 import { useInventory } from '../../contexts/InventoryContext';
 import { useCompany } from '../../contexts/CompanyContext';
 import { toast } from 'sonner';
-import axios from '@/lib/axios';
+
 
 interface ItemFormProps {
   item?: Item;
@@ -30,21 +30,22 @@ const SALES_UNITS = ['Case', 'Packet', 'Piece'];
 const GST_RATES = [5, 12, 18, 28];
 
 const ItemForm: React.FC<ItemFormProps> = ({ item, onSubmit, onCancel, companyId }) => {
-  const { filteredGodowns } = useInventory();
+  // const { filteredGodowns } = useInventory();
   const { companies } = useCompany();
 
   const [formData, setFormData] = useState<Omit<Item, 'id' | 'createdAt'>>({
     companyId: companyId || '',
     itemId: '',
     name: '',
-    type: 'GST',
     unitPrice: 0,
     mrp: 0,
     gstPercentage: 18,
-    hsnCode: '',
-    godownId: '',
+    hsn: '',
+    godown: '',
     stockQuantity: 0,
     salesUnit: 'Piece',
+    company:'',
+    rateAfterGst : 0
   });
 
   // Initialize form with item data if editing
@@ -53,15 +54,17 @@ const ItemForm: React.FC<ItemFormProps> = ({ item, onSubmit, onCancel, companyId
       setFormData({
         companyId: item.companyId,
         itemId: item.itemId,
-        name: item.name,
-        type: item.type,
         unitPrice: item.unitPrice,
         mrp: item.mrp || 0,
         gstPercentage: item.gstPercentage,
-        hsnCode: item.hsnCode || '',
-        godownId: item.godownId,
+        hsn: item.hsn || '',
+        // godownId: item.godownId,
         stockQuantity: item.stockQuantity,
         salesUnit: item.salesUnit || 'Piece', // Default to 'Piece' if not set
+        godown : item.godown,
+        rateAfterGst : item.rateAfterGst,
+        name : item.name,
+        company : item.company
       });
     } else {
       // Reset form if not editing
@@ -69,28 +72,29 @@ const ItemForm: React.FC<ItemFormProps> = ({ item, onSubmit, onCancel, companyId
         companyId: companyId || '',
         itemId: '',
         name: '',
-        type: 'GST',
         unitPrice: 0,
         mrp: 0,
         gstPercentage: 18,
-        hsnCode: '',
-        godownId: filteredGodowns.length > 0 ? filteredGodowns[0].id : '',
+        hsn: '',
+        godown : '',
+        company : '',
+        rateAfterGst : 0,
         stockQuantity: 0,
         salesUnit: 'Piece',
       });
     }
-  }, [item, companyId, filteredGodowns]);
+  }, [item, companyId, ]);
 
   // Automatically calculate MRP when unitPrice or gstPercentage changes
   useEffect(() => {
-    if (formData.type === 'GST' && formData.unitPrice && formData.gstPercentage) {
+    if (formData.unitPrice && formData.gstPercentage) {
       const calculatedMRP = formData.unitPrice * (1 + formData.gstPercentage / 100);
       setFormData(prev => ({
         ...prev,
         mrp: parseFloat(calculatedMRP.toFixed(2))
       }));
     }
-  }, [formData.unitPrice, formData.gstPercentage, formData.type]);
+  }, [formData.unitPrice, formData.gstPercentage,]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -123,7 +127,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ item, onSubmit, onCancel, companyId
       // Reset GST percentage if type is NON-GST
       gstPercentage: value === 'NON-GST' ? undefined : prev.gstPercentage || 18,
       // Reset HSN code if type is NON-GST
-      hsnCode: value === 'NON-GST' ? undefined : prev.hsnCode,
+      hsnCode: value === 'NON-GST' ? undefined : prev.hsn,
     }));
   };
 
@@ -132,20 +136,20 @@ const ItemForm: React.FC<ItemFormProps> = ({ item, onSubmit, onCancel, companyId
     
     if (selectedCompany) {
       // Set type based on company
-      let type: 'GST' | 'NON-GST' = formData.type;
+      // let type: 'GST' | 'NON-GST' = formData.type;
       
-      if (selectedCompany.name === 'Mansan Laal and Sons') {
-        type = 'GST';
-      } else if (selectedCompany.name === 'Estimate') {
-        type = 'NON-GST';
-      }
+      // if (selectedCompany.name === 'Mansan Laal and Sons') {
+      //   type = 'GST';
+      // } else if (selectedCompany.name === 'Estimate') {
+      //   type = 'NON-GST';
+      // }
       
       setFormData((prev) => ({
         ...prev,
         companyId: value,
-        type,
-        gstPercentage: type === 'NON-GST' ? undefined : prev.gstPercentage || 18,
-        hsnCode: type === 'NON-GST' ? undefined : prev.hsnCode,
+      
+        gstPercentage: prev.gstPercentage,
+        hsnCode: prev.hsn
       }));
     }
   };
@@ -161,33 +165,33 @@ const ItemForm: React.FC<ItemFormProps> = ({ item, onSubmit, onCancel, companyId
     const company = companies.find(c => c.id === formData.companyId);
     
     // Company-specific validations
-    if (company) {
-      if (company.name === 'Mansan Laal and Sons') {
-        if (formData.type !== 'GST') {
-          toast.error('Mansan Laal and Sons requires GST items only');
-          return false;
-        }
+    // if (company) {
+    //   if (company.name === 'Mansan Laal and Sons') {
+    //     if (formData.type !== 'GST') {
+    //       toast.error('Mansan Laal and Sons requires GST items only');
+    //       return false;
+    //     }
         
-        if (!formData.hsnCode) {
-          toast.error('HSN Code is required for Mansan Laal and Sons items');
-          return false;
-        }
-      }
+    //     if (!formData.hsn) {
+    //       toast.error('HSN Code is required for Mansan Laal and Sons items');
+    //       return false;
+    //     }
+    //   }
       
-      if (company.name === 'Estimate' && formData.type !== 'NON-GST') {
-        toast.error('Estimate company only accepts Non-GST items');
-        return false;
-      }
-    }
+    //   if (company.name === 'Estimate' && formData.type !== 'NON-GST') {
+    //     toast.error('Estimate company only accepts Non-GST items');
+    //     return false;
+    //   }
+    // }
     
-    // Validate that GST items have HSN code
-    if (formData.type === 'GST' && !formData.hsnCode) {
-      toast.error('HSN Code is required for GST items');
-      return false;
-    }
+    // // Validate that GST items have HSN code
+    // if (formData.type === 'GST' && !formData.hsnCode) {
+    //   toast.error('HSN Code is required for GST items');
+    //   return false;
+    // }
     
     // Validate MRP calculation for GST items
-    if (formData.type === 'GST' && formData.gstPercentage && formData.mrp) {
+    if ( formData.gstPercentage && formData.mrp) {
       const calculatedMRP = formData.unitPrice * (1 + formData.gstPercentage / 100);
       if (Math.abs(calculatedMRP - formData.mrp) > 0.01) { // Allow small rounding difference
         toast.error(`MRP should be equal to Excl. Cost + GST (${calculatedMRP.toFixed(2)})`);
@@ -262,7 +266,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ item, onSubmit, onCancel, companyId
           <div>
             <Label htmlFor="type">Item Type</Label>
             <Select
-              value={formData.type}
+              // value={formData.type}
               onValueChange={(value: 'GST' | 'NON-GST') => handleTypeChange(value)}
               disabled={selectedCompanyName === 'Mansan Laal and Sons' || selectedCompanyName === 'Estimate'}
             >
@@ -300,7 +304,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ item, onSubmit, onCancel, companyId
             />
           </div>
 
-          {formData.type === 'GST' && (
+          {formData.gstPercentage && (
             <>
               <div>
                 <Label htmlFor="gstPercentage">GST Percentage (%)</Label>
@@ -326,10 +330,10 @@ const ItemForm: React.FC<ItemFormProps> = ({ item, onSubmit, onCancel, companyId
                 <Input
                   id="hsnCode"
                   name="hsnCode"
-                  value={formData.hsnCode || ''}
+                  value={formData.hsn || ''}
                   onChange={handleChange}
                   placeholder="Enter HSN Code"
-                  required={formData.type === 'GST'}
+                  // required={formData.type === 'GST'}
                 />
               </div>
             </>
@@ -347,7 +351,7 @@ const ItemForm: React.FC<ItemFormProps> = ({ item, onSubmit, onCancel, companyId
               onChange={handleChange}
               required
             />
-            {formData.type === 'GST' && formData.unitPrice && formData.gstPercentage && (
+            {formData.unitPrice && formData.gstPercentage && (
               <p className="text-xs text-muted-foreground mt-1">
                 Calculated: ₹{(formData.unitPrice * (1 + formData.gstPercentage / 100)).toFixed(2)}
               </p>
@@ -356,21 +360,21 @@ const ItemForm: React.FC<ItemFormProps> = ({ item, onSubmit, onCancel, companyId
 
           <div>
             <Label htmlFor="godownId">Godown</Label>
-            <Select
+            {/* <Select
               value={formData.godownId}
               onValueChange={(value) => handleSelectChange('godownId', value)}
-            >
+            > */}
               <SelectTrigger>
                 <SelectValue placeholder="Select godown" />
               </SelectTrigger>
               <SelectContent>
-                {filteredGodowns.map((godown) => (
+                {/* {filteredGodowns.map((godown) => (
                   <SelectItem key={godown.id} value={godown.id}>
                     {godown.name}
-                  </SelectItem>
-                ))}
+                  </SelectItem> */}
+                {/* ))} */}
               </SelectContent>
-            </Select>
+            {/* </Select> */}
           </div>
 
           <div>

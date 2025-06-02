@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -12,33 +11,29 @@ import { PlusCircle } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
 import { useCompany } from '../contexts/CompanyContext';
+import { toast } from 'sonner';
 
 const Inventory = () => {
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
-  const { addItem, updateItem, deleteItem } = useInventory();
+  const { items } = useInventory();
   const { companies, currentCompany, setCurrentCompany } = useCompany();
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>(currentCompany?.id || '');
 
   const handleAddItem = () => {
     setIsAddingItem(true);
     setEditingItem(null);
+    toast.info('Adding new items is currently disabled in this version.');
   };
 
   const handleEditItem = (item: Item) => {
     setEditingItem(item);
     setIsAddingItem(false);
+    toast.info('Editing items is currently disabled in this version.');
   };
 
   const handleSubmit = (formData: Omit<Item, 'id' | 'createdAt'>) => {
-    if (editingItem) {
-      updateItem({
-        ...editingItem,
-        ...formData,
-      });
-    } else {
-      addItem(formData);
-    }
+    toast.info('Item management is currently disabled in this version.');
     setIsAddingItem(false);
     setEditingItem(null);
   };
@@ -49,9 +44,7 @@ const Inventory = () => {
   };
 
   const handleDeleteItem = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this item?')) {
-      deleteItem(id);
-    }
+    toast.info('Deleting items is currently disabled in this version.');
   };
 
   const handleCompanyChange = (companyId: string) => {

@@ -24,9 +24,9 @@ export interface Godown {
 }
 
 export interface Item {
-  // id: string;
+  id: string;
   company: string;
-  companyId : number
+  companyId : string
   itemId: string;
   name: string;
   // type: 'GST' | 'NON-GST';
@@ -59,6 +59,7 @@ export interface SaleItem {
   totalPrice: number; // Final price after GST and discount
   totalAmount: number;
   salesUnit: string;
+  godown: string;
 }
 
 // Customer Type
@@ -81,11 +82,16 @@ export interface Sale {
   date: string;
   customerName: string;
   billType: 'GST' | 'NON-GST';
-  godownId: string;
+  godownId?: string;
   totalAmount: number;
   totalDiscount?: number;
   totalExclusiveCost?: number;
   totalGst?: number;
+  taxInvoiceNo?: string;  // Added tax invoice number field
+  estimateNo?: string;    // Added estimate number field
+  partyAccount?: string;  // Added party account field
+  customerMobile?: string; // Added customer mobile field
+  extraValue?: string;     // Added extra value field
   items: SaleItem[];
   // createdBy: string;
   createdAt: string;

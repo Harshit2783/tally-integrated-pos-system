@@ -55,7 +55,7 @@ interface CompanySummary {
 
 const EnhancedSaleForm: React.FC = () => {
   const { companies, currentCompany, setCurrentCompany } = useCompany();
-  const { items, filteredItems, filteredGodowns } = useInventory();
+  const { items } = useInventory();
   const { addSaleItem, currentSaleItems, removeSaleItem, createSale, clearSaleItems, validateCompanyItems, updateSaleItem: contextUpdateSaleItem } = useSales();
   const { addCustomer } = useCustomers();
   const { currentUser } = useAuth();
@@ -65,7 +65,6 @@ const EnhancedSaleForm: React.FC = () => {
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [quantity, setQuantity] = useState<number>(1);
   const [customerName, setCustomerName] = useState<string>('');
-  const [selectedGodownId, setSelectedGodownId] = useState<string>('');
   const [salesUnit, setSalesUnit] = useState<string>('Piece');
   const [mrp, setMrp] = useState<number>(0);
   const [exclusiveCost, setExclusiveCost] = useState<number>(0);
@@ -99,9 +98,12 @@ const EnhancedSaleForm: React.FC = () => {
 
   // Add this near the top of the component, after state declarations:
   const itemsToShow = items;
-  console.log(itemsToShow);
+  // Debug logging can be re-enabled if needed
+  // console.log(itemsToShow);
 
   // Restore hsnCode and packagingDetails state
+  const [gstRate,setGstRate] = useState<number>(0)
+  const [hsnCode,setHsnCode] = useState<string>('')
   const [packagingDetails, setPackagingDetails] = useState<string>('');
 
   // Add state for customer suggestions popover
@@ -170,14 +172,7 @@ const EnhancedSaleForm: React.FC = () => {
     // const hasGodowns = filteredGodowns && filteredGodowns.length > 0;
     
     setIsLoading(!(hasItems));
-  }, [companies, items, filteredGodowns]);
-
-  // Initialize godown selection
-  useEffect(() => {
-    if (filteredGodowns && filteredGodowns.length > 0 && !selectedGodownId) {
-      setSelectedGodownId(filteredGodowns[0].id);
-    }
-  }, [filteredGodowns, selectedGodownId]);
+  }, [companies, items]);
 
   // Update item details when item selection changes
   useEffect(() => {
@@ -186,18 +181,19 @@ const EnhancedSaleForm: React.FC = () => {
       if (item) {
         setSelectedItem(item);
         // Set GST rate based on company and item
-       
-
+        setGstRate(item.gstPercentage || 0);
+        setHsnCode(item.hsn || '');
         if (item.gstPercentage > 0) {
           if (item.mrp) {
             setMrp(item.mrp);
             const calculatedExclusiveCost = calculateExclusiveCost(item.mrp, item.gstPercentage);
+  
             setExclusiveCost(calculatedExclusiveCost);
             const calculatedGstAmount = item.mrp - calculatedExclusiveCost;
             setGstAmount(calculatedGstAmount * quantity);
           } else {
             setExclusiveCost(item.unitPrice);
-            const calculatedMrp = calculateMRP(item.unitPrice, item.);
+            const calculatedMrp = calculateMRP(item.unitPrice, item.gstPercentage);
             setMrp(calculatedMrp);
             const calculatedGstAmount = calculatedMrp - item.unitPrice;
             setGstAmount(calculatedGstAmount * quantity);
@@ -285,7 +281,8 @@ const EnhancedSaleForm: React.FC = () => {
       totalPrice,
       totalAmount: totalPrice,
       hsnCode: hsnCode || undefined,
-      packagingDetails: packagingDetails || undefined
+      packagingDetails: packagingDetails || undefined,
+      godown: selectedItem.godown
     };
     try {
       addSaleItem(saleItem);
@@ -420,11 +417,6 @@ const EnhancedSaleForm: React.FC = () => {
       return;
     }
     
-    if (!selectedGodownId) {
-      toast.error('Please select a godown');
-      return;
-    }
-    
     try {
       // Validate company-specific rules
       const validation = validateCompanyItems(currentSaleItems);
@@ -460,10 +452,14 @@ const EnhancedSaleForm: React.FC = () => {
           date: new Date().toISOString(),
           customerName,
           billType,
-          godownId: selectedGodownId,
           items,
           totalAmount: items.reduce((sum, item) => sum + item.totalPrice, 0),
           createdBy: currentUser?.name || 'Unknown',
+          taxInvoiceNo,
+          estimateNo,
+          partyAccount,
+          customerMobile,
+          extraValue,
         };
         
         const sale = createSale(billData);
@@ -482,6 +478,11 @@ const EnhancedSaleForm: React.FC = () => {
         
         // Reset form
         setCustomerName('');
+        setTaxInvoiceNo('');
+        setEstimateNo('');
+        setPartyAccount('');
+        setCustomerMobile('');
+        setExtraValue('');
         clearSaleItems();
       }
     } catch (error) {
@@ -509,7 +510,7 @@ const EnhancedSaleForm: React.FC = () => {
         <div className="flex items-center justify-between">
           <span className="font-semibold">
             {item.name}
-            {item.type === 'GST' && item.gstPercentage ? ` (GST: ${item.gstPercentage}%)` : ''} - ₹{item.unitPrice}
+            {item.gstPercentage ? ` (GST: ${item.gstPercentage}%)` : ''} - ₹{item.unitPrice}
           </span>
           {/* Bulk pricing link if available */}
           {hasBulkPrices && (
@@ -571,6 +572,22 @@ const EnhancedSaleForm: React.FC = () => {
   // Remove popover/ref/focus logic for customer name input
   const [customerNameInputFocused, setCustomerNameInputFocused] = useState(false);
 
+  // Add state for tax invoice and estimate number
+  const [taxInvoiceNo, setTaxInvoiceNo] = useState<string>('');
+  const [estimateNo, setEstimateNo] = useState<string>('');
+  
+  // Add state for party account, customer mobile and extra value
+  const [partyAccount, setPartyAccount] = useState<string>('');
+  const [customerMobile, setCustomerMobile] = useState<string>('');
+  const [extraValue, setExtraValue] = useState<string>('');
+  
+  // Mock party accounts data - this would come from backend in a real application
+  const mockPartyAccounts = useMemo(() => [
+    { id: 'cash', name: 'Cash' },
+    { id: 'credit', name: 'Credit' },
+    { id: 'bank', name: 'Bank' },
+  ], []);
+
   // Loading state
   if (isLoading) {
     return (
@@ -586,13 +603,23 @@ const EnhancedSaleForm: React.FC = () => {
         customerName={customerName}
         onCustomerNameChange={setCustomerName}
         onAddCustomer={addCustomer}
+        taxInvoiceNo={taxInvoiceNo}
+        onTaxInvoiceNoChange={setTaxInvoiceNo}
+        estimateNo={estimateNo}
+        onEstimateNoChange={setEstimateNo}
+        partyAccount={partyAccount}
+        onPartyAccountChange={setPartyAccount}
+        customerMobile={customerMobile}
+        onCustomerMobileChange={setCustomerMobile}
+        extraValue={extraValue}
+        onExtraValueChange={setExtraValue}
+        partyAccounts={mockPartyAccounts}
       />
       
       <ItemEntryForm
         onAddItem={addSaleItem}
         companies={companies || []}
         items={items || []}
-        filteredGodowns={filteredGodowns || []}
       />
       
       <SaleItemsTable
@@ -611,7 +638,7 @@ const EnhancedSaleForm: React.FC = () => {
         onCreateSale={handleCreateSale}
         onPreviewBill={handlePreviewConsolidatedBill}
         onClearItems={clearSaleItems}
-        isDisabled={currentSaleItems.length === 0 || !customerName || !selectedGodownId}
+        isDisabled={currentSaleItems.length === 0 || !customerName}
       />
 
       <DiscountDialog

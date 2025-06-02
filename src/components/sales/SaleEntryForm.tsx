@@ -18,7 +18,7 @@ const calculateGST = (price: number, quantity: number, gstPercentage: number) =>
 
 const SaleEntryForm: React.FC = () => {
   const { currentCompany } = useCompany();
-  const { filteredItems, filteredGodowns } = useInventory();
+  // const { filteredItems, filteredGodowns } = useInventory();
   const { addSaleItem, currentSaleItems, removeSaleItem, createSale, clearSaleItems } = useSales();
 
   const [selectedItemId, setSelectedItemId] = useState<string>('');
@@ -130,11 +130,6 @@ const SaleEntryForm: React.FC = () => {
 
     if (customerName.trim() === '') {
       toast.error('Please enter customer name');
-      return;
-    }
-
-    if (selectedGodownId === '') {
-      toast.error('Please select a godown');
       return;
     }
 
@@ -426,7 +421,7 @@ const SaleEntryForm: React.FC = () => {
               <Button 
                 className="w-full"
                 size="lg"
-                disabled={currentSaleItems.length === 0 || !customerName || !selectedGodownId}
+                disabled={currentSaleItems.length === 0 || !customerName}
                 onClick={handleCreateSale}
               >
                 <ShoppingCart className="mr-2 h-4 w-4" />

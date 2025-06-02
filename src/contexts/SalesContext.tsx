@@ -1,10 +1,10 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Sale, SaleItem } from '../types';
 import { sales as mockSales, generateId, generateBillNumber } from '../data/mockData';
 import { useCompany } from './CompanyContext';
 import { useInventory } from './InventoryContext';
 import { toast } from 'sonner';
+import { formatInventoryItemForBilling } from '../utils/inventoryUtils';
 
 interface SalesContextType {
   sales: Sale[];
@@ -32,7 +32,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [currentSaleItems, setCurrentSaleItems] = useState<SaleItem[]>([]);
   
   const { currentCompany, companies } = useCompany();
-  const { updateStock, items } = useInventory();
+  const { items } = useInventory();
 
   // Filter sales based on current company
   useEffect(() => {
@@ -53,54 +53,39 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const addSaleItem = (saleItem: SaleItem) => {
     try {
+      // Format the item for billing
+      const formattedItem = formatInventoryItemForBilling(saleItem);
+      
       // Validate company-specific rules
-      if (saleItem.companyName === 'Mansan Laal and Sons' && !saleItem.gstPercentage) {
+      if (formattedItem.companyName === 'Mansan Laal and Sons' && !formattedItem.gstPercentage) {
         toast.error('Mansan Laal and Sons requires GST items only');
         return;
       }
       
-      if (saleItem.companyName === 'Estimate' && saleItem.gstPercentage) {
+      if (formattedItem.companyName === 'Estimate' && formattedItem.gstPercentage) {
         toast.error('Estimate company only accepts Non-GST items');
         return;
       }
       
       // HSN code validation for GST items of Mansan Laal
-      if (saleItem.companyName === 'Mansan Laal and Sons' && !saleItem.hsnCode) {
+      if (formattedItem.companyName === 'Mansan Laal and Sons' && !formattedItem.hsnCode) {
         toast.error('HSN Code is required for Mansan Laal and Sons items');
         return;
       }
       
-      // Check if item already exists in current sale items with the same company
-      const existingItemIndex = currentSaleItems.findIndex(
-        item => item.itemId === saleItem.itemId && item.companyId === saleItem.companyId
-      );
+      // Preserve original quantity, discount and other properties
+      const finalItem = {
+        ...formattedItem,
+        quantity: saleItem.quantity,
+        discountValue: saleItem.discountValue,
+        discountPercentage: saleItem.discountPercentage,
+        totalPrice: saleItem.totalPrice,
+        totalAmount: saleItem.totalAmount,
+      };
       
-      if (existingItemIndex !== -1) {
-        // Update quantity if item exists
-        const updatedItems = [...currentSaleItems];
-        const existingItem = updatedItems[existingItemIndex];
-        
-        const newQuantity = existingItem.quantity + saleItem.quantity;
-        const newTotalPrice = saleItem.unitPrice * newQuantity;
-        let newGstAmount = 0;
-        
-        if (saleItem.gstPercentage) {
-          newGstAmount = (saleItem.unitPrice * newQuantity * saleItem.gstPercentage) / 100;
-        }
-        
-        updatedItems[existingItemIndex] = {
-          ...existingItem,
-          quantity: newQuantity,
-          gstAmount: newGstAmount,
-          totalPrice: newTotalPrice + newGstAmount,
-          totalAmount: newTotalPrice + newGstAmount,
-        };
-        
-        setCurrentSaleItems(updatedItems);
-      } else {
-        // Add new item
-        setCurrentSaleItems(prev => [...prev, saleItem]);
-      }
+      // --- CORRECTION: Always add a new row for each item, even if itemId and companyId are the same ---
+      setCurrentSaleItems(prev => [...prev, finalItem]);
+      // --- END CORRECTION ---
     } catch (error) {
       console.error("Error adding sale item:", error);
       toast.error("Failed to add item");
@@ -197,7 +182,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         // Special validation for Mansan Laal
         if (company.name === 'Mansan Laal and Sons') {
           // All items must be GST items
-          const nonGstItems = companyItems.filter(item => !item.gstPercentage);
+          const nonGstItems = companyItems.filter(item => item.gstPercentage === undefined || item.gstPercentage === 0);
           if (nonGstItems.length > 0) {
             return {
               valid: false,
@@ -218,7 +203,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         // Special validation for Estimate
         if (company.name === 'Estimate') {
           // All items must be Non-GST items
-          const gstItems = companyItems.filter(item => item.gstPercentage && item.gstPercentage > 0);
+          const gstItems = companyItems.filter(item => item.gstPercentage !== undefined && item.gstPercentage > 0);
           if (gstItems.length > 0) {
             return {
               valid: false,
@@ -228,9 +213,9 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         }
         
         // General validation - no mixing of GST and Non-GST items
-        const hasGst = companyItems.some(item => item.gstPercentage && item.gstPercentage > 0);
-        const allHaveGst = companyItems.every(item => item.gstPercentage && item.gstPercentage > 0);
-        const noneHaveGst = companyItems.every(item => !item.gstPercentage || item.gstPercentage === 0);
+        const hasGst = companyItems.some(item => item.gstPercentage !== undefined && item.gstPercentage > 0);
+        const allHaveGst = companyItems.every(item => item.gstPercentage !== undefined && item.gstPercentage > 0);
+        const noneHaveGst = companyItems.every(item => item.gstPercentage === undefined || item.gstPercentage === 0);
         
         if (hasGst && !allHaveGst && !noneHaveGst) {
           return {
@@ -241,7 +226,7 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         
         // Validate MRP = Excl. Cost + GST for all GST items
         for (const item of companyItems) {
-          if (item.gstPercentage && item.mrp) {
+          if (item.gstPercentage !== undefined && item.gstPercentage > 0 && item.mrp) {
             const calculatedMRP = item.unitPrice * (1 + item.gstPercentage / 100);
             if (Math.abs(calculatedMRP - item.mrp) > 0.01) { // Allow small rounding difference
               return {
@@ -289,11 +274,8 @@ export const SalesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         createdAt: new Date().toISOString(),
       };
       
-      // Update stock quantities
-      saleData.items.forEach(item => {
-        // Pass the sales unit to updateStock for proper unit conversion
-        updateStock(item.itemId, item.quantity, item.salesUnit);
-      });
+      // Note: Stock update is currently disabled
+      // In a future update, implement proper stock management with the updateStock function
       
       // Add sale to list
       setSales(prev => [...prev, newSale]);
