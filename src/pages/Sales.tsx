@@ -1,4 +1,3 @@
-
 /**
  * Sales Page
  * Manages sales transactions with functionality to create new sales,
@@ -7,9 +6,6 @@
 
 import React, { useState } from 'react';
 import MainLayout from '../components/layout/MainLayout';
-import { CompanyProvider } from '../contexts/CompanyContext';
-import { InventoryProvider } from '../contexts/InventoryContext';
-import { SalesProvider } from '../contexts/SalesContext';
 import EnhancedSaleForm from '../components/sales/EnhancedSaleForm';
 import SalesList from '../components/sales/SalesList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -43,14 +39,6 @@ const Sales = () => {
   );
 };
 
-const SalesPage = () => (
-  <CompanyProvider>
-    <InventoryProvider>
-      <SalesProvider>
-        <Sales />
-      </SalesProvider>
-    </InventoryProvider>
-  </CompanyProvider>
-);
+const SalesPage = () => <Sales />;
 
 export default SalesPage;

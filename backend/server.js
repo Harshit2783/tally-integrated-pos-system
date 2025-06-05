@@ -2,7 +2,9 @@ import express from 'express'
 import dotenv from 'dotenv'
 import cors from 'cors'
 import { connectToTally } from './config/tally.config.js';
-import stockTallyRoutes from './routes/stockTallyRoutes.js'
+import stockTallyRoutes from './routes/stockTallyRoutes.js';
+import customerTallyRoutes from './routes/customerTallyRoutes.js';
+
 
 
 const app = express();
@@ -28,7 +30,10 @@ if(connectionStatus)
 {
     //tally is connected successfully....
     //Routes
+    //fetch stocks
     app.use('/api/tally/stocks', stockTallyRoutes)
+    //fetch customers
+    app.use('/api/tally/customers', customerTallyRoutes)
 
     //NOW CALL TALLY-RELATED APISN HERE...
 }

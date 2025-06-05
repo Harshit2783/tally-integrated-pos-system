@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Item, Godown } from '../types';
-import { items as mockItems, godowns as mockGodowns, generateId } from '../data/mockData';
 import { useCompany } from './CompanyContext';
 import { toast } from 'sonner';
 import axios from '@/lib/axios';
@@ -10,93 +9,82 @@ interface InventoryContextType {
   godowns: Godown[];
   filteredItems: Item[];
   filteredGodowns: Godown[];
-  getItemsByCompany: (companyId: string) => Item[];
-  getGodownsByCompany: (companyId: string) => Godown[];
-  updateStock: (itemId: string, quantity: number, salesUnit?: string) => void;
+  // getItemsByCompany: (companyId: string) => Item[];
+  // getGodownsByCompany: (companyId: string) => Godown[];
   getAllItems: () => Item[];
+  isLoading: boolean;
+  error: string | null;
 }
 
 const InventoryContext = createContext<InventoryContextType | undefined>(undefined);
 
 export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  //declaring items as an empty array
   const [items, setItems] = useState<Item[]>([]);
-  const [godowns, setGodowns] = useState<Godown[]>(mockGodowns);
+  const [godowns, setGodowns] = useState<Godown[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { currentCompany } = useCompany();
   
   const [filteredItems, setFilteredItems] = useState<Item[]>([]);
   const [filteredGodowns, setFilteredGodowns] = useState<Godown[]>([]);
 
+  const fetchItems = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
 
-  //fetch items from backend
-  //api calling
-  useEffect(()=>{
-    const cached = localStorage.getItem('items')
-    if(cached)
-    {
-      setItems(JSON.parse(cached))
+      const result = await axios.post('/api/tally/stocks/fetch-items');
+      console.log("result",result.data)
+      
+      if (!result.data) {
+        throw new Error('No data received from server');
+      }
+
+
+      const mappedItems: Item[] = result.data.map((item: any, index: number) => ({
+        id: item.id || item.itemId || `${item.item_name}-${index}`,
+        name: item.item_name,
+        stockQuantity: item.stock_quantity || 0,
+        unitPrice: parseFloat(item.standard_price) || 0,
+        hsn: item.hsn_code,
+        gstPercentage: item.gst_details?.igst_rate ? parseFloat(item.gst_details.igst_rate) : 0,
+        mrp: item.mrp_rate,
+        godown: item.godowns || [],
+        company: item.company_name || '',
+        companyId: item.companyId || '',
+        salesUnit: item.salesUnit || 'Piece',
+        createdAt: item.createdAt || new Date().toISOString(),
+        rateAfterGst: 0,
+        priceList : item.price_level_list || []
+      }));
+
+      
+      
+      setGodowns(result.data.godowns || []);
+      setItems(mappedItems);
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch inventory items';
+      console.error('Error fetching items:', errorMessage);
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    else 
-    {
-      fetchItems()
-    }
-  },[]//runs on single mount
-  );  
+  useEffect(() => {
+    fetchItems();
+  }, []);
 
-  // Filter items and godowns based on current company
   useEffect(() => {
     if (currentCompany) {
       setFilteredItems(items.filter(item => item.companyId === currentCompany.id));
-      setFilteredGodowns(godowns.filter(godown => godown.companyId === currentCompany.id));
     } else {
-      // If no company is selected, show all items
       setFilteredItems(items);
       setFilteredGodowns(godowns);
     }
   }, [currentCompany, items, godowns]);
 
-  const fetchItems = async()=>{
-    try{
-      const result  = await axios.post('/api/tally/stocks/fetch-items');
-      
-      //items obtained as array of object in result.data
-      console.log(result.data);
-
-      const mappedItems : Item[] = result.data.map((item,index : number)=>({
-        id: item.id || item.itemId || `${item.itemName}-${index}`,
-        name : item.itemName,
-        stockQuantity : item.totalQuantity,
-        unitPrice : item.rate,
-        hsn : item.HSN,
-        gstPercentage : item.GST,
-        mrp : item.MRP,
-        godown : item.godown,
-        company : item.company,
-        companyId: item.companyId || '',
-        itemId: item.itemId || `item-${index}`,
-        salesUnit: item.salesUnit || 'Piece',
-        createdAt: item.createdAt || new Date().toISOString(),
-        rateAfterGst : item.rateAfterGST
-      }))
-
-      setItems(mappedItems)
-      localStorage.setItem('items',JSON.stringify(mappedItems))
-    }
-    catch(err)
-    {
-      console.log(err.message);
-    }
-  };
-
-  const getItemsByCompany = (companyId: string): Item[] => {
-    return items.filter(item => item.companyId === companyId);
-  };
-
-  const getGodownsByCompany = (companyId: string): Godown[] => {
-    return godowns.filter(godown => godown.companyId === companyId);
-  };
-  
   const getAllItems = (): Item[] => {
     return items;
   };
@@ -163,10 +151,9 @@ export const InventoryProvider: React.FC<{ children: ReactNode }> = ({ children 
         godowns,
         filteredItems,
         filteredGodowns,
-        getItemsByCompany,
-        getGodownsByCompany,
-        updateStock,
         getAllItems,
+        isLoading,
+        error
       }}
     >
       {children}

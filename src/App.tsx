@@ -1,4 +1,3 @@
-
 /**
  * App Root Component
  * Main entry point that sets up the application's routing,
@@ -13,6 +12,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { CompanyProvider } from "./contexts/CompanyContext";
 import { CustomersProvider } from "./contexts/CustomersContext";
+import { InventoryProvider } from "./contexts/InventoryContext";
+import { SalesProvider } from "./contexts/SalesContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Companies from "./pages/Companies";
@@ -36,22 +37,26 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <CompanyProvider>
-            <CustomersProvider>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/" element={<Index />} />
-                <Route path="/companies" element={<Companies />} />
-                <Route path="/customers" element={<Customers />} />
-                <Route path="/inventory" element={<Inventory />} />
-                <Route path="/godowns" element={<Godowns />} />
-                <Route path="/sales" element={<Sales />} />
-                <Route path="/sales/new" element={<NewSale />} />
-                <Route path="/reports" element={<Reports />} />
-                <Route path="/tally-sync" element={<TallySync />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </CustomersProvider>
+            <InventoryProvider>
+              <SalesProvider>
+                <CustomersProvider>
+                  <Routes>
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/" element={<Index />} />
+                    <Route path="/companies" element={<Companies />} />
+                    <Route path="/customers" element={<Customers />} />
+                    <Route path="/inventory" element={<Inventory />} />
+                    <Route path="/godowns" element={<Godowns />} />
+                    <Route path="/sales" element={<Sales />} />
+                    <Route path="/sales/new" element={<NewSale />} />
+                    <Route path="/reports" element={<Reports />} />
+                    <Route path="/tally-sync" element={<TallySync />} />
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </CustomersProvider>
+              </SalesProvider>
+            </InventoryProvider>
           </CompanyProvider>
         </AuthProvider>
       </BrowserRouter>

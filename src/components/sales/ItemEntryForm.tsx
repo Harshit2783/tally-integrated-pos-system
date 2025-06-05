@@ -9,10 +9,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CheckIcon, ChevronDown } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Item, SaleItem } from '../../types';
-import { useCompany } from '../../contexts/CompanyContext';
 import { useInventory } from '../../contexts/InventoryContext';
 import { toast } from 'sonner';
 import { calculateExclusiveCost, calculateMRP, calculateGstAmount } from '../../utils/pricingUtils';
+import { useCustomers } from '../../contexts/CustomersContext';
 
 
 // Define sales units
@@ -29,9 +29,13 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
   companies,
   items,
 }) => {
+  const { groupedCustomers } = useCustomers();
   const [company,setCompany] = useState<string>('');
   const [selectedItemName, setSelectedItemName] = useState<string>('');
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [selectedGodown, setSelectedGodown] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [isItemPopoverOpen, setIsItemPopoverOpen] = useState<boolean>(false);
   const [quantity, setQuantity] = useState<number>(0);
   const [salesUnit, setSalesUnit] = useState<string>('Piece');
   const [mrp, setMrp] = useState<number>(0);
@@ -41,8 +45,6 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
   const [gstAmount, setGstAmount] = useState<number>(0);
   const [discount, setDiscount] = useState<number>(0);
   const [discountType, setDiscountType] = useState<'amount' | 'percentage'>('amount');
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [isItemPopoverOpen, setIsItemPopoverOpen] = useState<boolean>(false);
   const [packagingDetails, setPackagingDetails] = useState<string>('');
 
   // Filter items based on search
@@ -52,9 +54,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
     }
     const lowerSearchTerm = searchTerm.toLowerCase();
     return items.filter(item =>
-      (item.name && item.name.toLowerCase().includes(lowerSearchTerm)) ||
-      (item.itemId && item.itemId.toLowerCase().includes(lowerSearchTerm)) 
-   
+      (item.name && item.name.toLowerCase().includes(lowerSearchTerm))
     );
   }, [searchTerm, items]);
 
@@ -62,49 +62,61 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
   React.useEffect(() => {
     if (items && items.length > 0) {
       const item = items.find((item) => item.name === selectedItemName);
+      console.log("item",item)
       if (item) {
         setSelectedItem(item);
+        // Set default godown if available
+        if (item.godown && item.godown.length > 0) {
+          setSelectedGodown(item.godown[0].name);
+        } else {
+          setSelectedGodown('');
+        }
         // Set GST rate based on company and item
-        // const itemGstRate = item.type === 'GST' ? (item.gstPercentage || 0) : 0;
         setGstRate(item.gstPercentage);
         setHsnCode(item.hsn);
         setCompany(item.company)
-        if (item.gstPercentage > 0) {
-          if (item.mrp) {
-            setMrp(item.mrp);
-            const calculatedExclusiveCost = calculateExclusiveCost(item.mrp, item.gstPercentage);
-            setExclusiveCost(calculatedExclusiveCost);
-            const calculatedGstAmount = item.mrp - calculatedExclusiveCost;
-            setGstAmount(calculatedGstAmount * quantity);
-          } else {
-            setExclusiveCost(item.unitPrice);
-            const calculatedMrp = calculateMRP(item.unitPrice, item.gstPercentage);
-            setMrp(calculatedMrp);
-            const calculatedGstAmount = calculatedMrp - item.unitPrice;
-            setGstAmount(calculatedGstAmount * quantity);
-          }
-        } else {
-          setExclusiveCost(item.unitPrice);
-          setMrp(item.unitPrice);
-          setGstAmount(0);
-        }
+        setExclusiveCost(item.unitPrice || 0)
+        
+        // if (item.gstPercentage > 0) {
+        //   if (item.mrp) {
+        //     setMrp(item.mrp);
+        //     const calculatedExclusiveCost = calculateExclusiveCost(item.mrp, item.gstPercentage);
+        //     setExclusiveCost(calculatedExclusiveCost);
+        //     const calculatedGstAmount = calculatedExclusiveCost * (item.gstPercentage / 100) * (quantity || 0);
+        //     setGstAmount(calculatedGstAmount);
+        //   } else {
+        //     setExclusiveCost(item.unitPrice || 0);
+        //     const calculatedMrp = calculateMRP(item.unitPrice || 0, item.gstPercentage);
+        //     setMrp(calculatedMrp);
+        //     const calculatedGstAmount = (item.unitPrice || 0) * (item.gstPercentage / 100) * (quantity || 0);
+        //     setGstAmount(calculatedGstAmount);
+        //   }
+        // } else {
+        //   setExclusiveCost(item.unitPrice || 0);
+        //   setMrp(item.unitPrice || 0);
+        //   setGstAmount(0);
+        // }
+
+        
       } else {
         setSelectedItem(null);
         setMrp(0);
         setExclusiveCost(0);
-        // setGstRate(0);
         setGstAmount(0);
-        // setHsnCode('');
       }
-    } else {
-      setSelectedItem(null);
-      setMrp(0);
-      setExclusiveCost(0);
-      // setGstRate(0);
-      setGstAmount(0);
-      // setHsnCode('');
     }
   }, [selectedItemName, items, quantity]);
+
+  // Reset form function
+  const resetForm = () => {
+    setSelectedItemName('');
+    setSelectedItem(null);
+    setQuantity(0);
+    setDiscount(0);
+    setHsnCode('')
+    setSearchTerm('');
+    setIsItemPopoverOpen(false);
+  };
 
   // Handle adding item to bill
   const handleAddItem = () => {
@@ -112,8 +124,12 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
       toast.error('Please select an item');
       return;
     }
-    if (quantity <= 0) {
+    if (!quantity || quantity <= 0) {
       toast.error('Quantity must be greater than 0');
+      return;
+    }
+    if (!selectedGodown) {
+      toast.error('Please select a godown');
       return;
     }
     let discountValue = 0;
@@ -134,11 +150,15 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
       itemGstAmount = (discountedBaseAmount * gstRate) / 100;
     }
     const totalPrice = discountedBaseAmount + itemGstAmount;
-    const itemCompany = selectedItem.company
+    
+    // Get company details
+    const itemCompany = selectedItem.company;
+    const companyId = selectedItem.companyId;
+
     const saleItem: SaleItem = {
       itemId: '1',
-      companyId: selectedItem.companyId,
-      companyName : itemCompany,
+      companyId: companyId,
+      companyName: itemCompany,
       name: selectedItem.name,
       quantity,
       unitPrice: exclusiveCost,
@@ -152,17 +172,11 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
       totalAmount: totalPrice,
       hsnCode: hsnCode || undefined,
       packagingDetails: packagingDetails || undefined,
-      godown: selectedItem.godown || 'Not assigned'
+      godown: selectedItem.godown ? selectedItem.godown.filter(g => g.name === selectedGodown) : []
     };
     try {
       onAddItem(saleItem);
-      setSelectedItemName('');
-      setSelectedItem(null);
-      setQuantity(0);
-      setDiscount(0);
-      setHsnCode('')
-      setSearchTerm('');
-      setIsItemPopoverOpen(false);
+      resetForm();
     } catch (error) {
       toast.error('Error adding item to sale');
       console.error('Error adding item to sale:', error);
@@ -205,7 +219,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
       <form onSubmit={(e) => e.preventDefault()}>
         <div className="flex flex-wrap items-end gap-2 mb-2 overflow-x-auto">
           {/* Item Selection */}
-          <div className="w-[280px]">
+          <div className="w-[350px]">
             <Label htmlFor="item" className="text-xs">Item Name</Label>
             <Popover open={isItemPopoverOpen} onOpenChange={setIsItemPopoverOpen}>
               <PopoverTrigger asChild>
@@ -239,7 +253,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
                     ) : (
                       filteredSearchItems.map((item) => (
                         <button
-                          key={item.itemId || item.name}
+                          key={item.name}
                           type="button"
                           className="w-full p-2 text-left hover:bg-gray-100 rounded-sm flex items-center"
                           onClick={(e) => {
@@ -269,12 +283,22 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
           {/* Godown */}
           <div className="w-[180px]">
             <Label htmlFor="godown" className="text-xs">Godown</Label>
-            <Input
-              id="godown"
-              value={selectedItem?.godown || 'Not assigned'}
-              readOnly
-              className="bg-gray-50 h-8 text-xs"
-            />
+            <Select 
+              value={selectedGodown} 
+              onValueChange={setSelectedGodown}
+              disabled={!selectedItem || !selectedItem.godown || selectedItem.godown.length === 0}
+            >
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue placeholder="Select godown" />
+              </SelectTrigger>
+              <SelectContent>
+                {selectedItem?.godown?.map((godown) => (
+                  <SelectItem key={godown.name} value={godown.name}>
+                    {godown.name} ({godown.quantity})
+                  </SelectItem>
+                )) || []}
+              </SelectContent>
+            </Select>
           </div>
           
           {/* Quantity */}
@@ -283,9 +307,12 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
             <Input
               id="quantity"
               type="number"
-              min="1"
+              min="0"
               value={quantity}
-              onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
+              onChange={(e) => {
+                const value = e.target.value === '' ? 0 : parseFloat(e.target.value);
+                setQuantity(value);
+              }}
               className="h-8 text-xs"
             />
           </div>
@@ -308,7 +335,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
           </div>
           
           {/* Quantity */}
-          <div className="w-[80px]">
+          {/* <div className="w-[80px]">
             <Label htmlFor="stockQuantity" className="text-xs">Quantity</Label>
             <Input
               id="stockQuantity"
@@ -317,9 +344,9 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
               readOnly
               className="bg-gray-50 h-8 text-xs"
             />
-          </div>
+          </div> */}
           
-          {/* MRP */}
+          {/* MRP
           <div className="w-[80px]">
             <Label htmlFor="mrp" className="text-xs">MRP</Label>
             <Input
@@ -331,7 +358,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
               className="h-8 text-xs"
               readOnly
             />
-          </div>
+          </div> */}
           
           {/* Excl. GST Rate */}
           <div className="w-[80px]">
@@ -341,8 +368,14 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
               type="number"
               min="0"
               step="0.01"
-              value={Number(exclusiveCost).toFixed(2)}
-              onChange={(e) => setExclusiveCost(parseFloat(e.target.value) || 0)}
+              value={exclusiveCost}
+              onChange={(e) => {
+                const value = parseFloat(e.target.value) || 0;
+                setExclusiveCost(value);
+                // Recalculate GST amount when exclusive cost changes
+                const newGstAmount = value * (gstRate / 100) * (quantity || 0);
+                setGstAmount(newGstAmount);
+              }}
               className="h-8 text-xs"
             />
           </div>
@@ -435,7 +468,7 @@ const ItemEntryForm: React.FC<ItemEntryFormProps> = ({
           
           {/* Nett Amount */}
           <div className="w-[200px]">
-            <Label htmlFor="nettAmount" className="text-xs">Nett Amount</Label>
+            <Label htmlFor="nettAmount" className="text-xs">Net Amount</Label>
             <Input
               id="nettAmount"
               type="number"

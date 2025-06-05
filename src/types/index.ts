@@ -13,21 +13,23 @@ export interface Company {
 }
 
 export interface Godown {
-  id: string;
-  companyId: string;
-  name: string;
-  address: string;
-  contactPerson: string;
-  phone: string;
-  email: string;
-  createdAt: string;
+  name: string,
+  quantity: string
 }
+
+export interface PriceLevel {
+  rate : string,
+  ending_at : string,
+  starting_at : string
+
+}
+
 
 export interface Item {
   id: string;
   company: string;
   companyId : string
-  itemId: string;
+  // itemId: string;
   name: string;
   // type: 'GST' | 'NON-GST';
   unitPrice: number;
@@ -35,11 +37,12 @@ export interface Item {
   gstPercentage?: number;
   hsn?: string;  
   // godownId: string;
-  godown : string,
+  godown : Godown[],
   stockQuantity: number;
   salesUnit: 'Case' | 'Packet' | 'Piece';
   createdAt: string;
-  rateAfterGst : number
+  rateAfterGst : number,
+  priceList : PriceLevel[]
 }
 
 export interface SaleItem {
@@ -59,13 +62,11 @@ export interface SaleItem {
   totalPrice: number; // Final price after GST and discount
   totalAmount: number;
   salesUnit: string;
-  godown: string;
+  godown: Godown[];
 }
 
 // Customer Type
 export interface Customer {
-  id: string;
-  companyId: string;
   name: string;
   phone: string;
   email: string;

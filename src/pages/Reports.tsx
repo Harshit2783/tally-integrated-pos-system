@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
 import MainLayout from '../components/layout/MainLayout';
-import { CompanyProvider } from '../contexts/CompanyContext';
-import { InventoryProvider } from '../contexts/InventoryContext';
-import { SalesProvider } from '../contexts/SalesContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCompany } from '../contexts/CompanyContext';
@@ -94,7 +91,8 @@ const Reports = () => {
           
           <div className="w-64">
             <Select 
-              value={selectedCompanyId} 
+              defaultValue="all"
+              value={selectedCompanyId || 'all'}
               onValueChange={handleCompanyChange}
             >
               <SelectTrigger>
@@ -290,14 +288,6 @@ const Reports = () => {
   );
 };
 
-const ReportsPage = () => (
-  <CompanyProvider>
-    <InventoryProvider>
-      <SalesProvider>
-        <Reports />
-      </SalesProvider>
-    </InventoryProvider>
-  </CompanyProvider>
-);
+const ReportsPage = () => <Reports />;
 
 export default ReportsPage;

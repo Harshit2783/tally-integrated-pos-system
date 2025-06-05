@@ -1,4 +1,3 @@
-
 /**
  * Main Layout Component
  * Common layout wrapper for all authenticated pages providing consistent
@@ -52,9 +51,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     { name: 'Companies', href: '/companies', icon: Building2 },
     { name: 'Customers', href: '/customers', icon: Users },
     { name: 'Inventory', href: '/inventory', icon: Package },
-    { name: 'Godowns', href: '/godowns', icon: Warehouse },
+    // { name: 'Godowns', href: '/godowns', icon: Warehouse },
     { name: 'Sales', href: '/sales', icon: ShoppingCart },
-    { name: 'Reports', href: '/reports', icon: BarChart2 },
+    // { name: 'Reports', href: '/reports', icon: BarChart2 },
     { name: 'Tally Sync', href: '/tally-sync', icon: Upload },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
@@ -71,7 +70,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   return (
     <div className="min-h-screen flex">
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-pos-primary text-white transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-200 ease-in-out md:translate-x-0 md:relative`}>
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-pos-primary text-white transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-200 ease-in-out md:translate-x-0 md:static md:flex-shrink-0`}>
         <div className="flex flex-col h-full">
           {/* Sidebar Header */}
           <div className="p-4 border-b border-blue-900 flex items-center justify-between">
@@ -84,9 +83,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             </button>
           </div>
 
-
           {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto p-4">
+          <nav className="flex-1 p-4">
             <ul className="space-y-1">
               {navItems.map((item) => (
                 <li key={item.name}>
@@ -114,9 +112,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         {/* Top Header */}
-        <header className="bg-white border-b border-gray-200 shadow-sm">
+        <header className="bg-white border-b border-gray-200 shadow-sm flex-shrink-0">
           <div className="flex items-center justify-between p-4">
             <div className="flex items-center">
               <button

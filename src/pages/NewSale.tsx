@@ -1,4 +1,3 @@
-
 /**
  * New Sale Page
  * Dedicated page for creating new sales transactions with a focused
@@ -7,9 +6,6 @@
 
 import React from 'react';
 import MainLayout from '../components/layout/MainLayout';
-import { CompanyProvider } from '../contexts/CompanyContext';
-import { InventoryProvider } from '../contexts/InventoryContext';
-import { SalesProvider } from '../contexts/SalesContext';
 import EnhancedSaleForm from '../components/sales/EnhancedSaleForm';
 
 const NewSale = () => {
@@ -26,14 +22,6 @@ const NewSale = () => {
   );
 };
 
-const NewSalePage = () => (
-  <CompanyProvider>
-    <InventoryProvider>
-      <SalesProvider>
-        <NewSale />
-      </SalesProvider>
-    </InventoryProvider>
-  </CompanyProvider>
-);
+const NewSalePage = () => <NewSale />;
 
 export default NewSalePage;

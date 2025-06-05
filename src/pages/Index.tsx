@@ -1,16 +1,12 @@
-
 import React, { useState } from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import DashboardSummary from '../components/dashboard/DashboardSummary';
 import RecentSales from '../components/dashboard/RecentSales';
 import LowStockItems from '../components/dashboard/LowStockItems';
-import { InventoryProvider } from '../contexts/InventoryContext';
-import { SalesProvider } from '../contexts/SalesContext'; // Fixed import path
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, Package, RotateCcw } from 'lucide-react';
 import ReturnItemForm from '../components/inventory/ReturnItemForm';
-import { CompanyProvider } from '../contexts/CompanyContext';
 
 const Index = () => {
   const [showReturnForm, setShowReturnForm] = useState(false);
@@ -60,14 +56,6 @@ const Index = () => {
   );
 };
 
-const IndexPage = () => (
-  <CompanyProvider>
-    <InventoryProvider>
-      <SalesProvider>
-        <Index />
-      </SalesProvider>
-    </InventoryProvider>
-  </CompanyProvider>
-);
+const IndexPage = () => <Index />;
 
 export default IndexPage;

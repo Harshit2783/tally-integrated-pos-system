@@ -20,7 +20,7 @@ export const connectToTally = async()=>{
             connectionStatus = true;
             console.log('Connection successful! Response:');
             console.log(text.substring(0, 500));
-            return connectionStatus // print first 500 chars of response
+            return {connectionStatus,tallyURL} // print first 500 chars of response
         } 
         else {
       console.log(`Failed to connect to tally. HTTP status: ${response.status}`);

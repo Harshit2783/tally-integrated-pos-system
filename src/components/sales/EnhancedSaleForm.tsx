@@ -57,7 +57,7 @@ const EnhancedSaleForm: React.FC = () => {
   const { companies, currentCompany, setCurrentCompany } = useCompany();
   const { items } = useInventory();
   const { addSaleItem, currentSaleItems, removeSaleItem, createSale, clearSaleItems, validateCompanyItems, updateSaleItem: contextUpdateSaleItem } = useSales();
-  const { addCustomer } = useCustomers();
+  const { groupedCustomers } = useCustomers();
   const { currentUser } = useAuth();
 
   // Form state
@@ -108,14 +108,22 @@ const EnhancedSaleForm: React.FC = () => {
 
   // Add state for customer suggestions popover
   const [isCustomerPopoverOpen, setIsCustomerPopoverOpen] = useState(false);
-  const { customers } = useCustomers();
 
   // Filter customers based on input
   const filteredCustomerSuggestions = useMemo(() => {
     if (!customerName.trim()) return [];
     const lower = customerName.toLowerCase();
-    return customers.filter(c => c.name.toLowerCase().includes(lower));
-  }, [customerName, customers]);
+    
+    // Flatten all ledgers from all groups
+    return groupedCustomers.flatMap(group => 
+      group.ledgers.filter(ledger => 
+        ledger.toLowerCase().includes(lower)
+      ).map(ledger => ({
+        name: ledger,
+        group: group.group
+      }))
+    );
+  }, [customerName, groupedCustomers]);
 
   // Calculate company summaries for the bill
   const companySummaries = useMemo(() => {
@@ -152,7 +160,7 @@ const EnhancedSaleForm: React.FC = () => {
     return summaries;
   }, [currentSaleItems, companies]);
 
-  // Update filteredSearchItems to use itemsToShow:
+  // Update filteredSearchItems to remove itemId reference
   const filteredSearchItems = useMemo(() => {
     if (!searchTerm || !itemsToShow || itemsToShow.length === 0) {
       return itemsToShow || [];
@@ -160,7 +168,6 @@ const EnhancedSaleForm: React.FC = () => {
     const lowerSearchTerm = searchTerm.toLowerCase();
     return itemsToShow.filter(item =>
       (item.name && item.name.toLowerCase().includes(lowerSearchTerm)) ||
-      (item.itemId && item.itemId.toLowerCase().includes(lowerSearchTerm)) ||
       (item.hsn && item.hsn.toLowerCase().includes(lowerSearchTerm))
     );
   }, [searchTerm, itemsToShow]);
@@ -501,6 +508,11 @@ const EnhancedSaleForm: React.FC = () => {
     setConsolidatedPreviewOpen(true);
   };
 
+  // Add dummy onAddCustomer function
+  const handleAddCustomer = () => {
+    toast.info('Customer management is now handled through ledgers');
+  };
+
   const getItemDisplayDetails = (item: Item) => {
     if (!item) return "";
     const company = companies.find(c => c.id === item.companyId);
@@ -602,7 +614,7 @@ const EnhancedSaleForm: React.FC = () => {
       <CustomerInfo
         customerName={customerName}
         onCustomerNameChange={setCustomerName}
-        onAddCustomer={addCustomer}
+        onAddCustomer={handleAddCustomer}
         taxInvoiceNo={taxInvoiceNo}
         onTaxInvoiceNoChange={setTaxInvoiceNo}
         estimateNo={estimateNo}

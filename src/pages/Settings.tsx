@@ -1,4 +1,3 @@
-
 /**
  * Settings Page
  * Manages application configuration including Tally integration settings,
@@ -7,9 +6,6 @@
 
 import React, { useState } from 'react';
 import MainLayout from '../components/layout/MainLayout';
-import { CompanyProvider } from '../contexts/CompanyContext';
-import { InventoryProvider } from '../contexts/InventoryContext';
-import { SalesProvider } from '../contexts/SalesContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -110,14 +106,6 @@ const Settings = () => {
   );
 };
 
-const SettingsPage = () => (
-  <CompanyProvider>
-    <InventoryProvider>
-      <SalesProvider>
-        <Settings />
-      </SalesProvider>
-    </InventoryProvider>
-  </CompanyProvider>
-);
+const SettingsPage = () => <Settings />;
 
 export default SettingsPage;

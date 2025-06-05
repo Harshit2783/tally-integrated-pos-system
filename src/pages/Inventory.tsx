@@ -1,15 +1,12 @@
 import React, { useState } from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
-import { CompanyProvider } from '../contexts/CompanyContext';
-import { InventoryProvider } from '../contexts/InventoryContext';
 import ItemList from '../components/inventory/ItemList';
 import ItemForm from '../components/inventory/ItemForm';
 import { Item } from '../types';
 import { useInventory } from '../contexts/InventoryContext';
 import { PlusCircle } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card } from '@/components/ui/card';
 import { useCompany } from '../contexts/CompanyContext';
 import { toast } from 'sonner';
 
@@ -122,12 +119,6 @@ const Inventory = () => {
   );
 };
 
-const InventoryPage = () => (
-  <CompanyProvider>
-    <InventoryProvider>
-      <Inventory />
-    </InventoryProvider>
-  </CompanyProvider>
-);
+const InventoryPage = () => <Inventory />;
 
 export default InventoryPage;

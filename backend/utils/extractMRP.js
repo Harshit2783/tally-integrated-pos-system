@@ -1,4 +1,4 @@
-export function extractMRP(string){
+export default function extractMRP(string){
     const match = string.match(/Mrp(\d+)/i)
     return match ? match[1] : ''
 

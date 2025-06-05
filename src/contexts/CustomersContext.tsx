@@ -1,106 +1,79 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Customer } from '../types';
-import { generateId } from '../data/mockData';
-import { useCompany } from './CompanyContext';
 import { toast } from 'sonner';
+import axios from '@/lib/axios';
 
-// Mock customer data
-const mockCustomers: Customer[] = [
-  {
-    id: '1',
-    companyId: '1',
-    name: 'John Doe',
-    phone: '+91 9876543210',
-    email: 'john.doe@example.com',
-    gstNumber: '27AABCI1234A1Z5',
-    address: '123 Main St, Mumbai, Maharashtra',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: '2',
-    companyId: '1',
-    name: 'Jane Smith',
-    phone: '+91 9876543211',
-    email: 'jane.smith@example.com',
-    gstNumber: '',
-    address: '456 Park Ave, Delhi',
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: '3',
-    companyId: '2',
-    name: 'Mike Johnson',
-    phone: '+91 9876543212',
-    email: 'mike.j@example.com',
-    gstNumber: '07AABCI4567B1Z8',
-    address: '789 Business Park, Bangalore',
-    createdAt: new Date().toISOString()
-  }
-];
+interface GroupedLedgers {
+  group: string;
+  ledgers: string[];
+}
 
 interface CustomersContextType {
-  customers: Customer[];
-  filteredCustomers: Customer[];
-  addCustomer: (customer: Omit<Customer, 'id' | 'createdAt'>) => void;
-  updateCustomer: (customer: Customer) => void;
-  deleteCustomer: (id: string) => void;
-  getCustomerById: (id: string) => Customer | undefined;
+  groupedCustomers: GroupedLedgers[];
+  selectedGroup: string;
+  setSelectedGroup: (group: string) => void;
+  filteredLedgers: string[];
 }
 
 const CustomersContext = createContext<CustomersContextType | undefined>(undefined);
 
 export const CustomersProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [customers, setCustomers] = useState<Customer[]>(mockCustomers);
-  const { currentCompany } = useCompany();
-  
-  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
+  const [groupedCustomers, setGroupedCustomers] = useState<GroupedLedgers[]>([]);
+  const [selectedGroup, setSelectedGroup] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Filter customers based on current company
   useEffect(() => {
-    if (currentCompany) {
-      setFilteredCustomers(customers.filter(customer => customer.companyId === currentCompany.id));
-    } else {
-      setFilteredCustomers([]);
+    fetchCustomers();
+  }, []);
+
+  const fetchCustomers = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await axios.post('/api/tally/customers/fetch-ledgers');
+      
+      if (!response.data) {
+        throw new Error('No data received from server');
+      }
+
+      // Transform the response data into GroupedLedgers format
+      const transformedData = Object.entries(response.data).map(([_, value]: [string, any]) => ({
+        group: value.group,
+        ledgers: value.ledgers || []
+      }));
+
+      setGroupedCustomers(transformedData);
+      
+      // Set default selected group if none is selected
+      if (!selectedGroup && transformedData.length > 0) {
+        setSelectedGroup(transformedData[0].group);
+      }
+
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to fetch customers';
+      console.error('Error fetching customers:', errorMessage);
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
-  }, [currentCompany, customers]);
-
-  const addCustomer = (customerData: Omit<Customer, 'id' | 'createdAt'>) => {
-    const newCustomer: Customer = {
-      ...customerData,
-      id: generateId(),
-      createdAt: new Date().toISOString(),
-    };
-    
-    setCustomers((prev) => [...prev, newCustomer]);
-    toast.success('Customer added successfully');
   };
 
-  const updateCustomer = (updatedCustomer: Customer) => {
-    setCustomers((prev) =>
-      prev.map((customer) => (customer.id === updatedCustomer.id ? updatedCustomer : customer))
-    );
-    toast.success('Customer updated successfully');
-  };
-
-  const deleteCustomer = (id: string) => {
-    setCustomers((prev) => prev.filter((customer) => customer.id !== id));
-    toast.success('Customer deleted successfully');
-  };
-
-  const getCustomerById = (id: string) => {
-    return customers.find(customer => customer.id === id);
-  };
+  // Get filtered ledgers based on selected group
+  const filteredLedgers = React.useMemo(() => {
+    if (!selectedGroup) return [];
+    const group = groupedCustomers.find(g => g.group === selectedGroup);
+    return group ? group.ledgers : [];
+  }, [selectedGroup, groupedCustomers]);
 
   return (
     <CustomersContext.Provider
       value={{
-        customers,
-        filteredCustomers,
-        addCustomer,
-        updateCustomer,
-        deleteCustomer,
-        getCustomerById
+        groupedCustomers,
+        selectedGroup,
+        setSelectedGroup,
+        filteredLedgers
       }}
     >
       {children}

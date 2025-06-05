@@ -1,4 +1,3 @@
-
 /**
  * Godowns Page
  * Manages warehouse/godown locations with functionality to add, edit,
@@ -8,8 +7,6 @@
 import React, { useState } from 'react';
 import MainLayout from '../components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
-import { CompanyProvider } from '../contexts/CompanyContext';
-import { InventoryProvider } from '../contexts/InventoryContext';
 import GodownList from '../components/godowns/GodownList';
 import GodownForm from '../components/godowns/GodownForm';
 import { Godown } from '../types';
@@ -80,12 +77,6 @@ const Godowns = () => {
   );
 };
 
-const GodownsPage = () => (
-  <CompanyProvider>
-    <InventoryProvider>
-      <Godowns />
-    </InventoryProvider>
-  </CompanyProvider>
-);
+const GodownsPage = () => <Godowns />;
 
 export default GodownsPage;
