@@ -134,11 +134,16 @@ const EnhancedSaleForm: React.FC = () => {
     }
 
     currentSaleItems.forEach(item => {
-      if (!summaries[item.companyId]) {
-        const company = companies?.find(c => c.id === item.companyId);
-        summaries[item.companyId] = {
-          id: item.companyId,
-          name: company ? company.name : 'Unknown Company',
+      const companyName = item.companyName;
+      if (!companyName) {
+        console.warn(`Company name not found for item ${item.name}`);
+        return;
+      }
+
+      if (!summaries[companyName]) {
+        summaries[companyName] = {
+          id: companyName, // Using company name as ID
+          name: companyName,
           subtotal: 0,
           discount: 0,
           gst: 0,
@@ -146,7 +151,7 @@ const EnhancedSaleForm: React.FC = () => {
         };
       }
 
-      const summary = summaries[item.companyId];
+      const summary = summaries[companyName];
       const baseAmount = item.unitPrice * item.quantity;
       const discountAmount = item.discountValue || 0;
       const gstAmount = item.gstAmount || 0;
@@ -158,7 +163,7 @@ const EnhancedSaleForm: React.FC = () => {
     });
 
     return summaries;
-  }, [currentSaleItems, companies]);
+  }, [currentSaleItems]);
 
   // Update filteredSearchItems to remove itemId reference
   const filteredSearchItems = useMemo(() => {
@@ -272,10 +277,14 @@ const EnhancedSaleForm: React.FC = () => {
     }
     const totalPrice = discountedBaseAmount + itemGstAmount;
     const itemCompany = companies?.find(c => c.id === selectedItem.companyId);
+    
+    // Get company name from the company object or use a default
+    const companyName = itemCompany?.name || 'Unknown Company';
+    
     const saleItem: SaleItem = {
       itemId: selectedItem.id,
       companyId: selectedItem.companyId,
-      companyName: itemCompany ? itemCompany.name : 'Unknown Company',
+      companyName: companyName,
       name: selectedItem.name,
       quantity,
       unitPrice: exclusiveCost,
@@ -432,29 +441,38 @@ const EnhancedSaleForm: React.FC = () => {
         return;
       }
       
-      // Group items by company to create separate bills if needed
+      // Group items by company name to create separate bills if needed
       const itemsByCompany: Record<string, SaleItem[]> = {};
       
       currentSaleItems.forEach(item => {
-        if (!itemsByCompany[item.companyId]) {
-          itemsByCompany[item.companyId] = [];
+        const companyName = item.companyName;
+        if (!companyName) {
+          console.warn(`Company name not found for item ${item.name}`);
+          return;
         }
-        itemsByCompany[item.companyId].push(item);
+
+        if (!itemsByCompany[companyName]) {
+          itemsByCompany[companyName] = [];
+        }
+        
+        itemsByCompany[companyName].push(item);
       });
       
       // Create bills for each company
       const createdSales = [];
       
-      for (const [companyId, items] of Object.entries(itemsByCompany)) {
-        const company = companies?.find(c => c.id === companyId);
+      for (const [companyName, items] of Object.entries(itemsByCompany)) {
+        const company = companies?.find(c => c.name === companyName);
+        
         const hasGst = items.some(item => item.gstPercentage && item.gstPercentage > 0);
         
         // Explicitly cast billType to the correct type
         const billType = hasGst ? 'GST' as const : 'NON-GST' as const;
-        const billNumber = `${billType}-${Date.now()}`; // Generate a bill number
+        const billNumber = `${companyName.substring(0, 3).toUpperCase()}-${Date.now()}`; // Generate a bill number with company prefix
         
         const billData = {
-          companyId,
+          companyId: company?.id || companyName, // Fallback to company name if ID not found
+          companyName: companyName,
           billNumber,
           date: new Date().toISOString(),
           customerName,
@@ -475,26 +493,26 @@ const EnhancedSaleForm: React.FC = () => {
         }
       }
       
+      // Clear the form if all sales were created successfully
       if (createdSales.length > 0) {
-        // Set created sales for printing
-        setCreatedSale(createdSales.length === 1 ? createdSales[0] : createdSales);
-        
-        // Ask user about printing
-        setPrintType(createdSales.length === 1 ? 'single' : 'all');
-        setIsPrintModalOpen(true);
-        
-        // Reset form
-        setCustomerName('');
-        setTaxInvoiceNo('');
-        setEstimateNo('');
-        setPartyAccount('');
-        setCustomerMobile('');
-        setExtraValue('');
+        setCreatedSale(createdSales);
         clearSaleItems();
+        setCustomerName('');
+        setSelectedItemId('');
+        setSelectedItem(null);
+        setQuantity(1);
+        setSalesUnit('Piece');
+        setMrp(0);
+        setExclusiveCost(0);
+        setGstAmount(0);
+        setDiscount(0);
+        setDiscountType('amount');
+        setSearchTerm('');
+        setIsPrintModalOpen(true);
       }
     } catch (error) {
-      toast.error('Error creating sale');
       console.error('Error creating sale:', error);
+      toast.error('Failed to create sale');
     }
   };
   
