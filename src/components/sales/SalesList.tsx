@@ -1,16 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSales } from '../../contexts/SalesContext';
 import { Sale } from '../../types';
 import { useInventory } from '../../contexts/InventoryContext';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Calendar, ShoppingCart, FileText, Printer, Download, Loader } from 'lucide-react';
+import { Eye, Calendar, Printer } from 'lucide-react';
 import { format } from 'date-fns';
-import { generateTallyXML, pushToTally } from '../../utils/tallyUtils';
 import { useCompany } from '../../contexts/CompanyContext';
 import { toast } from 'sonner';
 import { PrintBillModal } from './PrintBillModal';
-import Loaders from '../ui/loader';
+import Loader from '../ui/loader';
 
 const SalesList: React.FC = () => {
   const { filteredSales } = useSales();
@@ -18,235 +17,139 @@ const SalesList: React.FC = () => {
   const { currentCompany } = useCompany();
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
-  const [printType, setPrintType] = useState<'single' | 'all'>('single');
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
-  // Create a map of godown IDs to names for quick lookup
-  const godownNameMap = React.useMemo(() => {
-    if (!filteredGodowns) return {};
-    
-    return filteredGodowns.reduce((acc, godown) => {
-      acc[godown.id] = godown.name;
-      return acc;
-    }, {} as Record<string, string>);
-  }, [filteredGodowns]);
 
-  // Check if data is loaded
-  React.useEffect(() => {
-    const hasGodowns = filteredGodowns && filteredGodowns.length > 0;
-    const hasSales = Array.isArray(filteredSales);
-    
-    setIsLoading(!(hasGodowns && hasSales));
-  }, [filteredGodowns, filteredSales]);
-
-  const handleViewDetails = (sale: Sale) => {
-    setSelectedSale(sale);
-  };
-
-  const handlePushToTally = async (sale: Sale) => {
-    if (!currentCompany) {
-      toast.error('No company selected');
-      return;
+  // Initialize loading state
+  useEffect(() => {
+    if (filteredSales !== undefined) {
+      setIsLoading(false);
     }
-    
-    try {
-      const xml = generateTallyXML(sale, currentCompany);
-      const result = await pushToTally(xml);
-      
-      if (result) {
-        toast.success('Successfully pushed to Tally');
-      } else {
-        toast.error('Failed to push to Tally');
-      }
-    } catch (error) {
-      console.error('Error pushing to Tally:', error);
-      toast.error('Error pushing to Tally');
-    }
-  };
+  }, [filteredSales]);
 
-  const handlePrint = (sale: Sale, companyId?: string) => {
+  // Sort sales by date in descending order (most recent first)
+  const sortedSales = useMemo(() => {
+    if (!filteredSales) return [];
+    return [...filteredSales].sort((a, b) => 
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+  }, [filteredSales]);
+
+  const handleViewBill = (sale: Sale) => {
     setSelectedSale(sale);
-    setPrintType(companyId ? 'single' : 'all');
-    setSelectedCompanyId(companyId || null);
     setIsPrintModalOpen(true);
   };
 
   const handleClosePrintModal = () => {
     setIsPrintModalOpen(false);
+    setSelectedSale(null);
+  };
+
+  // Get unique companies from a sale
+  const getUniqueCompanies = (sale: Sale) => {
+    const companies = new Set(sale.items.map(item => item.companyName));
+    return Array.from(companies);
   };
 
   if (isLoading) {
-    return (
-      <Card className="p-6 text-center">
-        <Loaders />
-        
-      </Card>
-    );
-  }
-
-  if (!filteredSales || filteredSales.length === 0) {
-    return (
-      <Card className="p-6 text-center">
-        <p className="text-gray-500">No sales found. Create a sale to get started.</p>
-      </Card>
-    );
+    return <Loader />;
   }
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-4">
-        {filteredSales.map((sale) => (
-          <Card key={sale.id} className="overflow-hidden">
-            <div className="flex flex-col md:flex-row">
-              <div className="md:w-1/4 bg-gray-50 p-6 flex flex-col justify-between">
-                <div>
-                  <div className="inline-block px-3 py-1 rounded-full text-xs font-medium mb-3"
-                    style={{
-                      backgroundColor: sale.billType === 'GST' ? '#dbeafe' : '#dcfce7',
-                      color: sale.billType === 'GST' ? '#1e40af' : '#166534',
-                    }}
-                  >
-                    {sale.billType} Bill
-                  </div>
-                  <h3 className="font-semibold text-lg">{sale.billNumber}</h3>
-                  <div className="flex items-center text-sm text-gray-500 mt-1">
-                    <Calendar size={14} className="mr-1" />
-                    {format(new Date(sale.date), 'dd MMM yyyy')}
-                  </div>
-                </div>
-                
-                <div className="text-lg font-bold mt-4">
-                  ₹{sale.totalAmount.toFixed(2)}
-                </div>
-              </div>
-              
-              <div className="p-6 flex-1">
-                <div className="flex flex-col md:flex-row md:justify-between">
-                  <div className="mb-4 md:mb-0">
-                    <h4 className="font-medium">Customer</h4>
-                    <p className="text-gray-800">{sale.customerName}</p>
-                  </div>
-                  
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {sortedSales.map((sale) => {
+          const uniqueCompanies = getUniqueCompanies(sale);
+          const hasMultipleCompanies = uniqueCompanies.length > 1;
+
+          return (
+            <Card key={sale.id} className="p-4">
+              <div className="flex flex-col space-y-3">
+                {/* Header with Bill Number and Date */}
+                <div className="flex justify-between items-start">
                   <div>
-                    <h4 className="font-medium">Godown</h4>
-                    <p className="text-gray-800">{godownNameMap[sale.godownId] || 'Unknown'}</p>
+                    <h3 className="font-semibold">Bill #{sale.billNumber}</h3>
+                    <div className="flex items-center text-sm text-gray-500">
+                      <Calendar className="h-4 w-4 mr-1" />
+                      {format(new Date(sale.date), 'dd MMM yyyy, hh:mm a')}
+                    </div>
+                  </div>
+                  <div className="px-2 py-1 rounded text-xs font-medium" 
+                    style={{
+                      backgroundColor: sale.billType === 'GST' ? '#e0f2fe' : '#f3e8ff',
+                      color: sale.billType === 'GST' ? '#0369a1' : '#6b21a8'
+                    }}>
+                    {sale.billType}
                   </div>
                 </div>
-                
-                <div className="mt-4">
-                  <h4 className="font-medium">Items</h4>
-                  <p className="text-gray-800">
-                    {sale.items.length} {sale.items.length === 1 ? 'item' : 'items'} in total
+
+                {/* Customer Info */}
+                <div className="text-sm">
+                  <p className="font-medium">Customer: {sale.customerName}</p>
+                  {sale.customerMobile && (
+                    <p className="text-gray-500">Mobile: {sale.customerMobile}</p>
+                  )}
+                </div>
+
+                {/* Companies Info */}
+                <div className="text-sm text-gray-600">
+                  <p>Companies: {uniqueCompanies.join(', ')}</p>
+                </div>
+
+                {/* Items Summary */}
+                <div className="text-sm">
+                  <p className="text-gray-600">
+                    Items: {sale.items.length} | 
+                    Qty: {sale.items.reduce((sum, item) => sum + item.quantity, 0)}
+                  </p>
+                  <p className="font-medium text-green-600">
+                    Total: ₹{sale.totalAmount.toFixed(2)}
                   </p>
                 </div>
-                
-                <div className="mt-2">
-                  <span className="text-xs text-gray-500">Bill made by {sale.createdBy}</span>
-                </div>
-                
-                <div className="flex flex-wrap gap-2 mt-4">
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 pt-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleViewDetails(sale)}
+                    className="flex-1"
+                    onClick={() => handleViewBill(sale)}
                   >
-                    <FileText size={16} className="mr-1" />
-                    View Details
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePushToTally(sale)}
-                  >
-                    <ShoppingCart size={16} className="mr-1" />
-                    Push to Tally
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePrint(sale)}
-                  >
-                    <Printer size={16} className="mr-1" />
-                    Print All Bills
+                    <Eye className="h-4 w-4 mr-2" />
+                    View Bill
                   </Button>
 
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handlePrint(sale, sale.companyId)}
+                    className="flex-1"
+                    onClick={() => handleViewBill(sale)}
                   >
-                    <Download size={16} className="mr-1" />
-                    Download Bill
+                    <Printer className="h-4 w-4 mr-2" />
+                    Print
                   </Button>
                 </div>
               </div>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
       </div>
-      
-      {selectedSale && (
-        <Card className="p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">Bill Details: {selectedSale.billNumber}</h3>
-            <Button variant="ghost" onClick={() => setSelectedSale(null)}>
-              Close
-            </Button>
-          </div>
-          
-          <div className="border rounded-md">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="p-2 text-left">Item</th>
-                  <th className="p-2 text-left">Qty</th>
-                  <th className="p-2 text-left">Unit Price</th>
-                  {selectedSale.billType === 'GST' && <th className="p-2 text-left">GST %</th>}
-                  {selectedSale.billType === 'GST' && <th className="p-2 text-left">GST Amt</th>}
-                  <th className="p-2 text-left">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {selectedSale.items.map((item, index) => (
-                  <tr key={index} className="border-t">
-                    <td className="p-2">{item.name}</td>
-                    <td className="p-2">{item.quantity}</td>
-                    <td className="p-2">₹{item.unitPrice.toFixed(2)}</td>
-                    {selectedSale.billType === 'GST' && <td className="p-2">{item.gstPercentage}%</td>}
-                    {selectedSale.billType === 'GST' && <td className="p-2">₹{(item.gstAmount || 0).toFixed(2)}</td>}
-                    <td className="p-2 font-medium">₹{item.totalPrice.toFixed(2)}</td>
-                  </tr>
-                ))}
-                
-                <tr className="border-t bg-gray-50">
-                  <td colSpan={selectedSale.billType === 'GST' ? 4 : 2} className="p-2 text-right font-medium">
-                    Total:
-                  </td>
-                  {selectedSale.billType === 'GST' && (
-                    <td className="p-2 font-medium">
-                      ₹{selectedSale.items.reduce((sum, item) => sum + (item.gstAmount || 0), 0).toFixed(2)}
-                    </td>
-                  )}
-                  <td className="p-2 font-medium">
-                    ₹{selectedSale.totalAmount.toFixed(2)}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </Card>
+
+      {/* No Sales Message */}
+      {!isLoading && sortedSales.length === 0 && (
+        <div className="text-center py-8">
+          <Calendar className="h-12 w-12 mx-auto text-gray-400 mb-3" />
+          <h3 className="text-lg font-medium text-gray-900">No Sales Found</h3>
+          <p className="text-gray-500">There are no sales records to display.</p>
+        </div>
       )}
 
+      {/* Print Bill Modal */}
       {isPrintModalOpen && selectedSale && (
-        <PrintBillModal 
-          isOpen={isPrintModalOpen} 
-          onClose={handleClosePrintModal} 
-          sale={selectedSale} 
-          printType={printType}
-          selectedCompanyId={selectedCompanyId}
+        <PrintBillModal
+          isOpen={isPrintModalOpen}
+          onClose={handleClosePrintModal}
+          sale={selectedSale}
+          printType="all"
         />
       )}
     </div>

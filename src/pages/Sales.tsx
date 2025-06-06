@@ -6,32 +6,37 @@
 
 import React, { useState } from 'react';
 import MainLayout from '../components/layout/MainLayout';
-import EnhancedSaleForm from '../components/sales/EnhancedSaleForm';
 import SalesList from '../components/sales/SalesList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Plus, List } from 'lucide-react';
 
 const Sales = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('list');
 
   return (
     <MainLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex justify-between items-center">
           <h2 className="text-3xl font-bold tracking-tight">Sales</h2>
+          <Button onClick={() => navigate('/sales/new')}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Sale
+          </Button>
         </div>
 
-        <Tabs defaultValue={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <Tabs defaultValue="list" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="list">Sales List</TabsTrigger>
-            <TabsTrigger value="new">New Sale</TabsTrigger>
+            <TabsTrigger value="list" onClick={() => setActiveTab('list')}>
+              <List className="h-4 w-4 mr-2" />
+              Sales List
+            </TabsTrigger>
           </TabsList>
-          
-          <TabsContent value="list" className="space-y-4">
+
+          <TabsContent value="list">
             <SalesList />
-          </TabsContent>
-          
-          <TabsContent value="new" className="space-y-4">
-            <EnhancedSaleForm />
           </TabsContent>
         </Tabs>
       </div>
@@ -39,6 +44,4 @@ const Sales = () => {
   );
 };
 
-const SalesPage = () => <Sales />;
-
-export default SalesPage;
+export default Sales;

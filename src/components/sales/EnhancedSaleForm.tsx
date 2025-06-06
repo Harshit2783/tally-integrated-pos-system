@@ -445,6 +445,7 @@ const EnhancedSaleForm: React.FC = () => {
       const itemsByCompany: Record<string, SaleItem[]> = {};
       
       currentSaleItems.forEach(item => {
+        console.log(item,"in EnhancedSaleForm");
         const companyName = item.companyName;
         if (!companyName) {
           console.warn(`Company name not found for item ${item.name}`);

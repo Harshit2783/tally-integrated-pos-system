@@ -79,6 +79,7 @@ export interface Customer {
 export interface Sale {
   id: string;
   companyId: string;
+  companyName: string;
   billNumber: string;
   date: string;
   customerName: string;

@@ -18,7 +18,6 @@ interface PrintBillModalProps {
   onClose: () => void;
   sale: Sale | Sale[];
   printType?: BillType;
-  selectedCompanyName?: string | null;
 }
 
 export const PrintBillModal: React.FC<PrintBillModalProps> = ({
@@ -26,10 +25,8 @@ export const PrintBillModal: React.FC<PrintBillModalProps> = ({
   onClose,
   sale,
   printType: initialPrintType = 'all',
-  selectedCompanyName: initialSelectedCompanyName = null,
 }) => {
   const [printType, setPrintType] = useState<BillType>(initialPrintType);
-  const [selectedCompanyName, setSelectedCompanyName] = useState<string | null>(initialSelectedCompanyName);
   const [currentCompanyIndex, setCurrentCompanyIndex] = useState(0);
   
   const sales = Array.isArray(sale) ? sale : [sale];
@@ -39,13 +36,13 @@ export const PrintBillModal: React.FC<PrintBillModalProps> = ({
     const companiesMap = new Map<string, Company>();
     
     sales.forEach(sale => {
-      sale.items.forEach(item => {
-        if (item.companyName && !companiesMap.has(item.companyName)) {
-          companiesMap.set(item.companyName, {
-            id: item.companyName, // Use company name as ID since we're not using IDs
-            name: item.companyName,
-            address: '', // These fields are required by the Company interface
-            phone: '',   // but may not be available in the sale item
+      if (sale.companyName) {
+        if (!companiesMap.has(sale.companyName)) {
+          companiesMap.set(sale.companyName, {
+            id: sale.companyId,
+            name: sale.companyName,
+            address: '',
+            phone: '',
             email: '',
             gstNumber: '',
             panNumber: '',
@@ -55,7 +52,7 @@ export const PrintBillModal: React.FC<PrintBillModalProps> = ({
             createdAt: new Date().toISOString()
           });
         }
-      });
+      }
     });
     
     return Array.from(companiesMap.values());
@@ -67,22 +64,11 @@ export const PrintBillModal: React.FC<PrintBillModalProps> = ({
   useEffect(() => {
     setCurrentCompanyIndex(0);
   }, [printType]);
-
-  // If we only have one company, automatically select it
-  useEffect(() => {
-    if (availableCompanies.length === 1 && !selectedCompanyName) {
-      setSelectedCompanyName(availableCompanies[0].name);
-    }
-  }, [availableCompanies, selectedCompanyName]);
   
-  // Helper function to get company info by name
-  const getCompanyByName = (name: string): Company | undefined => {
-    return availableCompanies.find(c => c.name === name);
-  };
-  
-  // Filter items for specific company
+  // Get items for specific company
   const getItemsForCompany = (companyName: string) => {
-    return sales.flatMap(s => s.items.filter(item => item.companyName === companyName));
+    const sale = sales.find(s => s.companyName === companyName);
+    return sale ? sale.items : [];
   };
 
   // Handle navigation between company bills in 'all' mode
@@ -121,44 +107,31 @@ export const PrintBillModal: React.FC<PrintBillModalProps> = ({
     if (printType === 'consolidated') {
       return (
         <BillPDFViewer>
-          <ConsolidatedBillTemplate sale={sale} />
+          <ConsolidatedBillTemplate sale={sales} />
         </BillPDFViewer>
       );
     } 
     
-    if (printType === 'single' && selectedCompanyName) {
-      const company = getCompanyByName(selectedCompanyName);
-      const items = getItemsForCompany(selectedCompanyName);
-      
-      if (!company) {
-        return <div className="p-4 text-center text-gray-500">Selected company not found</div>;
-      }
-      
-      if (items.length === 0) {
-        return <div className="p-4 text-center text-gray-500">No items found for selected company</div>;
-      }
-      
-      return (
-        <BillPDFViewer>
-          <CompanyBillTemplate company={company} sale={sales[0]} items={items} />
-        </BillPDFViewer>
-      );
-    } 
-    
-    if (printType === 'all') {
-      const currentCompany = availableCompanies[currentCompanyIndex];
-      if (!currentCompany) {
-        return <div className="p-4 text-center text-gray-500">Company not found</div>;
-      }
+    // For both 'single' and 'all' types, we show company bills with navigation
+    const currentCompany = availableCompanies[currentCompanyIndex];
+    if (!currentCompany) {
+      return <div className="p-4 text-center text-gray-500">Company not found</div>;
+    }
 
-      const items = getItemsForCompany(currentCompany.name);
-      
-      if (items.length === 0) {
-        return <div className="p-4 text-center text-gray-500">No items found for {currentCompany.name}</div>;
-      }
-      
-      return (
-        <>
+    const currentSale = sales.find(s => s.companyName === currentCompany.name);
+    if (!currentSale) {
+      return <div className="p-4 text-center text-gray-500">Sale not found for {currentCompany.name}</div>;
+    }
+
+    const items = currentSale.items;
+    
+    if (items.length === 0) {
+      return <div className="p-4 text-center text-gray-500">No items found for {currentCompany.name}</div>;
+    }
+    
+    return (
+      <>
+        {availableCompanies.length > 1 && (
           <div className="flex justify-between items-center mb-2 px-4">
             <Button
               variant="outline"
@@ -178,14 +151,12 @@ export const PrintBillModal: React.FC<PrintBillModalProps> = ({
               Next
             </Button>
           </div>
-          <BillPDFViewer>
-            <CompanyBillTemplate company={currentCompany} sale={sales[0]} items={items} />
-          </BillPDFViewer>
-        </>
-      );
-    }
-    
-    return <div className="p-4 text-center text-gray-500">Select a bill type to continue</div>;
+        )}
+        <BillPDFViewer>
+          <CompanyBillTemplate company={currentCompany} sale={currentSale} items={items} />
+        </BillPDFViewer>
+      </>
+    );
   };
 
   // Handle print action
@@ -211,12 +182,7 @@ export const PrintBillModal: React.FC<PrintBillModalProps> = ({
             <Label>Bill Type</Label>
             <RadioGroup 
               value={printType} 
-              onValueChange={(value: BillType) => {
-                setPrintType(value);
-                if (value === 'all') {
-                  setSelectedCompanyName(null);
-                }
-              }}
+              onValueChange={(value: BillType) => setPrintType(value)}
               className="flex flex-col space-y-1"
             >
               <div className="flex items-center space-x-2">
@@ -226,38 +192,11 @@ export const PrintBillModal: React.FC<PrintBillModalProps> = ({
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="single" id="single" />
-                <Label htmlFor="single">Single Company</Label>
-              </div>
-              <div className="flex items-center space-x-2">
                 <RadioGroupItem value="consolidated" id="consolidated" />
                 <Label htmlFor="consolidated">Consolidated Bill</Label>
               </div>
             </RadioGroup>
           </div>
-          
-          {printType === 'single' && availableCompanies && availableCompanies.length > 0 && (
-            <div className="space-y-2">
-              <Label>Select Company</Label>
-              <Select 
-                value={selectedCompanyName || ''} 
-                onValueChange={setSelectedCompanyName}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select company" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableCompanies.map((company) => (
-                    company && company.name ? (
-                      <SelectItem key={company.name} value={company.name}>
-                        {company.name} ({getItemsForCompany(company.name).length} items)
-                      </SelectItem>
-                    ) : null
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
         </div>
         
         <div className="border rounded-lg overflow-hidden bg-white">
@@ -276,7 +215,7 @@ export const PrintBillModal: React.FC<PrintBillModalProps> = ({
           
           {printType === 'consolidated' && availableCompanies && availableCompanies.length > 0 && (
             <PDFDownloadLink
-              document={<ConsolidatedBillTemplate sale={sale} />}
+              document={<ConsolidatedBillTemplate sale={sales} />}
               fileName={`consolidated-bill-${Date.now()}.pdf`}
               className="w-full"
             >
@@ -289,33 +228,12 @@ export const PrintBillModal: React.FC<PrintBillModalProps> = ({
             </PDFDownloadLink>
           )}
           
-          {printType === 'single' && selectedCompanyName && (
-            <PDFDownloadLink
-              document={
-                <CompanyBillTemplate 
-                  company={getCompanyByName(selectedCompanyName)!} 
-                  sale={sales[0]} 
-                  items={getItemsForCompany(selectedCompanyName)} 
-                />
-              }
-              fileName={`bill-${selectedCompanyName.replace(/\s+/g, '-').toLowerCase()}-${Date.now()}.pdf`}
-              className="w-full"
-            >
-              {({ loading }) => (
-                <Button variant="secondary" disabled={loading} className="w-full">
-                  <Download className="mr-2 h-4 w-4" />
-                  Download PDF
-                </Button>
-              )}
-            </PDFDownloadLink>
-          )}
-          
-          {printType === 'all' && availableCompanies && availableCompanies.length > 0 && (
+          {(printType === 'all' || printType === 'single') && availableCompanies && availableCompanies.length > 0 && (
             <PDFDownloadLink
               document={
                 <CompanyBillTemplate 
                   company={availableCompanies[currentCompanyIndex]} 
-                  sale={sales[0]} 
+                  sale={sales.find(s => s.companyName === availableCompanies[currentCompanyIndex].name)!} 
                   items={getItemsForCompany(availableCompanies[currentCompanyIndex].name)} 
                 />
               }
